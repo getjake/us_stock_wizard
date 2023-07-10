@@ -10,6 +10,11 @@ datasource db {
   url      = "postgresql://postgres:postgres@localhost:5435/stock_db"
 }
 
+enum ReportType {
+  ANNUAL
+  QUARTERLY
+}
+
 model Tickers {
   id        String   @id @default(uuid())
   ticker    String   @unique
@@ -24,4 +29,19 @@ model Tickers {
 
   @@unique([ticker, market])
   @@index([ticker, market])
+}
+
+model Fundamentals {
+  id               String     @id @default(uuid())
+  ticker           String
+  reportDate       String
+  reportType       ReportType
+  sales            Int
+  netIncome        Int
+  grossMarginRatio Float
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@unique([ticker, reportDate, reportType])
+  @@index([ticker, reportDate, reportType])
 }
