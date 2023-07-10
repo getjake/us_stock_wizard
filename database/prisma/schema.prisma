@@ -36,8 +36,8 @@ model Fundamentals {
   ticker           String
   reportDate       String
   reportType       ReportType
-  sales            Int
-  netIncome        Int
+  sales            BigInt
+  netIncome        BigInt
   grossMarginRatio Float
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt

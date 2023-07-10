@@ -12,6 +12,11 @@ from us_stock_wizard import StockRootDirectory
 from us_stock_wizard.database.db_utils import StockDbUtils
 
 
+class ReportType:
+    ANNUAL = "ANNUAL"
+    QUARTERLY = "QUARTERLY"
+
+
 class Fundamentals:
     """
     Fetch the recent fundamental data from Alpha Vantage API.
@@ -61,7 +66,7 @@ class Fundamentals:
         return result
 
     @staticmethod
-    def _process_report(data: dict) -> List[dict]:
+    def _process_report(ticker: str, data: dict, report_type: ReportType) -> List[dict]:
         _data = pd.DataFrame(data)
         # set as int
         _data["grossProfit"] = _data["grossProfit"].astype(int)
@@ -71,9 +76,22 @@ class Fundamentals:
         _data = _data[
             ["fiscalDateEnding", "netIncome", "totalRevenue", "grossMaginRatio"]
         ]
+        # Rename
+
+        _data = _data.rename(
+            columns={
+                "fiscalDateEnding": "reportDate",
+                "netIncome": "netIncome",
+                "totalRevenue": "sales",
+                "grossMaginRatio": "grossMarginRatio",
+            }
+        )
+        _data["ticker"] = ticker
+        _data["reportType"] = report_type
+
         return _data.to_dict(orient="records")
 
-    def process_is_data(self, stock: str) -> bool:
+    async def process_is_data(self, stock: str) -> bool:
         """
         Process the Income Statement data, and save it into the database
         """
@@ -88,13 +106,15 @@ class Fundamentals:
             return False
 
         if quarterly_reports:
-            _quarterly_reports = self._process_report(quarterly_reports)
-            asyncio.run(
-                StockDbUtils.insert(table="Fundamentals", data=_quarterly_reports)
+            _quarterly_reports = self._process_report(
+                ticker=stock, data=quarterly_reports, report_type=ReportType.QUARTERLY
             )
+            await StockDbUtils.insert(table="Fundamentals", data=_quarterly_reports)
         if annaul_reports:
-            _annaul_reports = self._process_report(annaul_reports)
-            asyncio.run(StockDbUtils.insert(table="Fundamentals", data=_annaul_reports))
+            _annaul_reports = self._process_report(
+                ticker=stock, data=annaul_reports, report_type=ReportType.ANNUAL
+            )
+            await StockDbUtils.insert(table="Fundamentals", data=_annaul_reports)
         logging.info(f"Done for {stock}")
 
         return True
