@@ -1,13 +1,15 @@
 import logging
+import asyncio
 from enum import Enum
-from typing import List
+from typing import List, Optional
 from dotenv import load_dotenv
 import httpx
 import yfinance as yf
 import pandas as pd
+from us_stock_wizard.database.db_utils import StockDbUtils
 
 
-class StockMarket(Enum, str):
+class StockMarket:
     NASDAQ = "NASDAQ"
     NYSE = "NYSE"
 
@@ -33,7 +35,8 @@ class StockUtils:
     }
 
     def __init__(self) -> None:
-        pass
+        self._nasdaq_tickers: Optional[pd.DataFrame] = None
+        self._nyse_tickers: Optional[pd.DataFrame] = None
 
     def get_tickers(self, market: StockMarket) -> pd.DataFrame:
         if market == StockMarket.NASDAQ:
@@ -51,5 +54,42 @@ class StockUtils:
         df = pd.DataFrame(data_rows, columns=data_headers)
         return df
 
-    def get_all_tickers(self) -> bool:
-        pass
+    def get_all_tickers(self) -> None:
+        # Nasdaq
+        self._nasdaq_tickers = self.get_tickers(market=StockMarket.NASDAQ)
+        # NYSE
+        self._nyse_tickers = self.get_tickers(market=StockMarket.NYSE)
+
+    def _handle_tickers(self, market: StockMarket) -> None:
+        """
+        Handle tickers for a given market, save it to database
+        """
+        if market == StockMarket.NASDAQ:
+            data = self._nasdaq_tickers
+        elif market == StockMarket.NYSE:
+            data = self._nyse_tickers
+        if data == None:
+            raise Exception(f"{market} tickers not loaded")
+        _data = data.copy()
+        columns = {
+            "symbol": "ticker",
+            "name": "name",
+            "market": "market",
+            "ipoyear": "ipoYear",
+            "sector": "sector",
+            "industry": "industry",
+        }
+
+        _data.rename(columns=columns, inplace=True)
+        _data["ipoYear"] = _data["ipoYear"].apply(lambda x: int(x) if x else -1)
+        _data["market"] = market
+
+        _data = _data[columns.values()]
+        all_results = _data.to_dict(orient="records")
+        # insert into database
+        asyncio.run(StockDbUtils.insert(table="tickers", data=all_results))
+        logging.info(f"Done for {market}")
+
+    def handle_all_tickers(self) -> None:
+        self._handle_tickers(market=StockMarket.NASDAQ)
+        self._handle_tickers(market=StockMarket.NYSE)
