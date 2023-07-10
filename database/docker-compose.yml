@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: stock_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ${DB_DATA_PATH_HOST:-postgres_data}:/var/lib/postgresql/data
+      - ${DB_CUSTOM_PGDATA_PATH_HOST:-postgres_custom_pgdata}:/var/lib/postgresql/data/pgdata
+    ports:
+      - '5435:5432'
+
+volumes:
+  postgres_data:
+  postgres_custom_pgdata:
