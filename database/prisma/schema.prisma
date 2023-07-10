@@ -4,9 +4,9 @@ generator client {
   recursive_type_depth = 5
 }
 
+// Change this to match your database connection
 datasource db {
   provider = "postgresql"
-  // url      = env("STOCK_DATABASE_URL")
   url      = "postgresql://postgres:postgres@localhost:5435/stock_db"
 }
 

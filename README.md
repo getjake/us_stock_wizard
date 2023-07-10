@@ -7,4 +7,10 @@ It include the following features:
 - [x] Find all the symbols in the US stock market (NYSE, NASDAQ)
 - [x] Database Managment
 
+We use the following tools to build this project:
+
+- Prisma
+- PostgreSQL
+-
+
 ## Todo

@@ -330,7 +330,7 @@ selenium_script/user_data_dir/
 # Test
 test.ipynb
 test*.ipynb
-
+test*.py
 
 
 
