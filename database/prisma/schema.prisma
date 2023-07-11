@@ -33,6 +33,18 @@ model Tickers {
   @@index([ticker, market])
 }
 
+model EarningCall {
+  id               String   @id @default(uuid())
+  ticker           String
+  reportDate       DateTime @db.Date
+  fiscalDateEnding DateTime @db.Date
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([ticker, fiscalDateEnding])
+  @@index([ticker, fiscalDateEnding])
+}
+
 model Fundamentals {
   id               String     @id @default(uuid())
   ticker           String

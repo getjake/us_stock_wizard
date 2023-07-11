@@ -9,6 +9,7 @@ class DbTable:
     FUNDAMENTALS = "Fundamentals"
     TRADING_CALENDAR = "TradingCalendar"
     DAILY_KLINE = "DailyKline"
+    EARNING_CALL = "EarningCall"
 
 
 class StockDbUtils:
