@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 import httpx
 import yfinance as yf
 import pandas as pd
-from us_stock_wizard.database.db_utils import StockDbUtils
+import pandas_market_calendars as mcal
+from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 
 
 class StockMarket:
@@ -14,7 +15,33 @@ class StockMarket:
     NYSE = "NYSE"
 
 
-class StockUtils:
+class StockCommon:
+    """
+    Stock common utils
+    """
+
+    @staticmethod
+    async def get_stock_list(conditions: dict = {}) -> List[str]:
+        """
+        Get list of stocks from the database, based on the given conditions
+        """
+        stocks = await StockDbUtils.read(table="Tickers", where=conditions)
+        _stocks = [stock.dict() for stock in stocks]
+        stock_df = pd.DataFrame(_stocks)
+        stock_df = stock_df[~stock_df["ticker"].str.contains("\^")]
+        return stock_df["ticker"].tolist()
+
+
+class StockTickers:
+    """
+    Get the list of tickers from Nasdaq and NYSE
+
+    Usage:
+        from us_stock_wizard.stocks import StockTickers
+        st = StockTickers()
+        await st.handle_all_tickers()
+    """
+
     NASDAQ_URL = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=25&exchange=NASDAQ&download=true"
     NYSE_URL = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=25&exchange=NYSE&download=true"
     HEADERS = {
@@ -60,7 +87,7 @@ class StockUtils:
         # NYSE
         self._nyse_tickers = self.get_tickers(market=StockMarket.NYSE)
 
-    def _handle_tickers(self, market: StockMarket) -> None:
+    async def _handle_tickers(self, market: StockMarket) -> None:
         """
         Handle tickers for a given market, save it to database
         """
@@ -87,9 +114,46 @@ class StockUtils:
         _data = _data[columns.values()]
         all_results = _data.to_dict(orient="records")
         # insert into database
-        asyncio.run(StockDbUtils.insert(table="tickers", data=all_results))
+        await StockDbUtils.insert(table=DbTable.TICKERS, data=all_results)
         logging.info(f"Done for {market}")
 
-    def handle_all_tickers(self) -> None:
-        self._handle_tickers(market=StockMarket.NASDAQ)
-        self._handle_tickers(market=StockMarket.NYSE)
+    async def handle_all_tickers(self) -> None:
+        self.get_all_tickers()
+        await self._handle_tickers(market=StockMarket.NASDAQ)
+        await self._handle_tickers(market=StockMarket.NYSE)
+
+
+class TradingCalendar:
+    """
+    Get the trading calendar for the next 90 days
+
+    Usage:
+
+        from us_stock_wizard.stocks import TradingCalendar
+        tc = TradingCalendar()
+        await tc.handle_calendar()
+    """
+
+    def __init__(self) -> None:
+        self.trading_calendar: Optional[List[pd.Timestamp]] = None
+        self.nyse = mcal.get_calendar(StockMarket.NYSE)
+
+    def get_calendar(self, days_forward: int = 90) -> List[pd.Timestamp]:
+        today = pd.Timestamp.today().strftime("%Y-%m-%d")
+        later = (pd.Timestamp.today() + pd.Timedelta(days=days_forward)).strftime(
+            "%Y-%m-%d"
+        )
+
+        result: List[pd.Timestamp] = self.nyse.schedule(
+            start_date=today, end_date=later
+        ).index.tolist()
+        return result
+
+    async def handle_calendar(self) -> None:
+        """
+        Handle trading calendar, save it to database
+        """
+        self.trading_calendar = self.get_calendar()
+        data = [{"date": date} for date in self.trading_calendar]
+        await StockDbUtils.insert(table=DbTable.TRADING_CALENDAR, data=data)
+        logging.info("Done")

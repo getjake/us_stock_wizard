@@ -16,16 +16,18 @@ enum ReportType {
 }
 
 model Tickers {
-  id        String   @id @default(uuid())
-  ticker    String   @unique
-  name      String
-  market    String
-  ipoYear   Int
-  sector    String
-  industry  String
-  delisted  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String    @id @default(uuid())
+  ticker                String    @unique
+  name                  String
+  market                String
+  ipoYear               Int
+  sector                String
+  industry              String
+  delisted              Boolean   @default(false)
+  fundamentalsUpdatedAt DateTime? @db.Date
+  klineUpdatedAt        DateTime? @db.Date
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@unique([ticker, market])
   @@index([ticker, market])
@@ -44,4 +46,30 @@ model Fundamentals {
 
   @@unique([ticker, reportDate, reportType])
   @@index([ticker, reportDate, reportType])
+}
+
+model TradingCalendar {
+  id        String   @id @default(uuid())
+  date      DateTime @unique @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
+model DailyKline {
+  id        String   @id @default(uuid())
+  ticker    String
+  date      DateTime @db.Date
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  adjClose  Float
+  volume    BigInt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([ticker, date])
+  @@index([ticker, date])
 }

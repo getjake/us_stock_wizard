@@ -3,3 +3,4 @@ pandas
 dotenv
 yfinance
 prisma
+pandas-market-calendars
