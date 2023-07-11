@@ -16,6 +16,10 @@ from us_stock_wizard.src.common import StockCommon
 
 
 class KlineFetch:
+    """
+    Check stock split and dividend
+    """
+
     def __init__(self) -> None:
         self.tickers = []
 
@@ -47,6 +51,28 @@ class KlineFetch:
         result: pd.DataFrame = yf.download(ticker, start=start, end=tomorrow)
         return result
 
+    def _check_split_dividend(self, ticker: str, start: str) -> bool:
+        """
+        Check if the ticker has split or dividend after the given date, no more than 90 days
+        """
+        _start = pd.to_datetime(start)
+        if (datetime.today() - _start).days > 90:
+            logging.info(f"More than 90 days for {ticker}")
+            return False
+
+        stock = yf.Ticker(ticker)
+        _data = stock.history(period="3mo")
+        _data.reset_index(inplace=True)
+        # filter `Date` is larger than `start`
+        _data["Date"] = pd.to_datetime(_data["Date"])
+        _data = _data[_data["Date"] >= start]
+        total_split = _data["Stock Splits"].sum()
+        total_dividend = _data["Dividends"].sum()
+        if total_dividend != 0 or total_split != 0:
+            logging.info(f"{ticker} has split or dividend")
+            return True
+        return False
+
     async def _check_last_update_date(self, ticker: str) -> Optional[datetime]:
         """
         Check the last update date of the given ticker
@@ -72,6 +98,13 @@ class KlineFetch:
         if _data.empty:
             logging.error(f"No data found for {ticker}")
             return
+        if last_update_date:
+            _is_dividend_split = self._check_split_dividend(ticker, last_update_date)
+            if _is_dividend_split:
+                # Remove all data for this stock and download all!
+                await StockDbUtils.delete(DbTable.DAILY_KLINE, {"ticker": ticker})
+                _data = self.get_ticker(ticker)
+
         _data.reset_index(inplace=True)
         _data = _data.rename(
             columns={
