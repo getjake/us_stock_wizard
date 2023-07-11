@@ -130,14 +130,22 @@ class StockCommon:
     """
 
     @staticmethod
-    async def get_stock_list(conditions: dict = {}) -> List[str]:
+    async def get_stock_list(conditions: dict = {}, format: str = "list") -> List[str]:
         """
         Get list of stocks from the database, based on the given conditions
+
+        Args:
+            conditions (dict, optional): Conditions to filter the stocks. Defaults to {}.
+            format (str, optional): Format of the output. Defaults to "list". / "df"
         """
         stocks = await StockDbUtils.read(table="Tickers", where=conditions)
         stock_df = StockCommon.convert_to_dataframe(stocks)
         stock_df = stock_df[~stock_df["ticker"].str.contains("\^")]
-        return stock_df["ticker"].tolist()
+        if format == "list":
+            return stock_df["ticker"].tolist()
+        if format == "df":
+            return stock_df
+        raise Exception(f"Invalid format: {format}")
 
     @staticmethod
     def convert_to_dataframe(data: list) -> pd.DataFrame:

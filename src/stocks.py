@@ -78,7 +78,7 @@ class StockTickers:
             data = self._nasdaq_tickers
         elif market == StockMarket.NYSE:
             data = self._nyse_tickers
-        if data == None:
+        if data is None:
             raise Exception(f"{market} tickers not loaded")
         _data = data.copy()
         columns = {

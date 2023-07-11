@@ -9,9 +9,11 @@ import logging
 from time import sleep
 from typing import List
 import httpx
+import numpy as np
 import pandas as pd
 from us_stock_wizard import StockRootDirectory
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
+from us_stock_wizard.src.common import StockCommon
 
 
 class ReportType:
@@ -53,7 +55,7 @@ class Fundamentals:
                 self.key_index = 0
             count += 1
             sleep(2)  # Avoid hitting the API limit
-        return {}
+        raise Exception(f"Failed to fetch data from API, params: {params}")
 
     def get_is_data(self, stock: str) -> dict:
         """
@@ -117,7 +119,7 @@ class Fundamentals:
             - grossMaginRatio
         """
         _data = pd.DataFrame(data)
-        # set as int
+        _data = _data.replace("None", 0)
         _data["grossProfit"] = _data["grossProfit"].astype(int)
         _data["netIncome"] = _data["netIncome"].astype(int)
         _data["totalRevenue"] = _data["totalRevenue"].astype(int)
@@ -125,6 +127,10 @@ class Fundamentals:
         _data = _data[
             ["fiscalDateEnding", "netIncome", "totalRevenue", "grossMaginRatio"]
         ]
+        _data = _data.replace(-np.inf, 0)
+        _data = _data.replace(np.inf, 0)
+        _data = _data.replace(np.nan, 0)
+
         # Rename
 
         _data = _data.rename(
@@ -138,6 +144,9 @@ class Fundamentals:
         _data["ticker"] = ticker
         _data["reportType"] = report_type
 
+        # save to pickle
+        _data.to_pickle(f"{ticker}_{report_type}.pkl")
+
         return _data.to_dict(orient="records")
 
     async def handle_is_data(self, stock: str) -> bool:
@@ -145,13 +154,24 @@ class Fundamentals:
         Process the Income Statement data, and save it into the database
         """
         data = self.get_is_data(stock)
-        if not data:
+        print(data)
+        if not data:  # Maybe info not exist for the ticker.
             logging.error("No data found for %s", stock)
+            await StockDbUtils.update(
+                DbTable.TICKERS,
+                {"ticker": stock},
+                {"fundamentalsUpdatedAt": datetime.now()},
+            )
             return False
         quarterly_reports: dict = data.get("quarterlyReports")
         annaul_reports: dict = data.get("annualReports")
         if not quarterly_reports and not annaul_reports:
             logging.error("No data found for %s", stock)
+            await StockDbUtils.update(
+                DbTable.TICKERS,
+                {"ticker": stock},
+                {"fundamentalsUpdatedAt": datetime.now()},
+            )
             return False
 
         if quarterly_reports:
@@ -173,3 +193,32 @@ class Fundamentals:
             {"fundamentalsUpdatedAt": datetime.now()},
         )
         return True
+
+    async def handle_all_is_data(self) -> None:
+        """
+        Process the Income Statement data for all tickers
+        """
+        all_tickers: pd.DataFrame = await StockCommon.get_stock_list(format="df")
+
+        earning_call_data = await StockDbUtils.read(table=DbTable.EARNING_CALL)
+        earning_call_data = StockCommon.convert_to_dataframe(earning_call_data)
+
+        # Null, those tickers have no fundamental data and never fetched before
+        all_tickers_null = all_tickers[all_tickers["fundamentalsUpdatedAt"].isnull()]
+
+        # Not null, updated before
+        all_tickers_not_null = all_tickers[
+            all_tickers["fundamentalsUpdatedAt"].notnull()
+        ]
+        all_tickers_not_null["fundamentalsUpdatedAt"] = pd.to_datetime(
+            all_tickers_not_null["fundamentalsUpdatedAt"]
+        )
+
+        # Handle null
+        for ticker in all_tickers_null["ticker"].tolist():
+            res = await self.handle_is_data(ticker)
+            # Always mark as succeed, even if failed
+            logging.info(f"Done for {ticker}")
+            asyncio.sleep(10)
+
+        # Handle not null
