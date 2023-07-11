@@ -4,7 +4,11 @@ from typing import List
 import pandas as pd
 
 
-class DbTable:
+class DbTable(str):
+    """
+    Please update it in case the `schema.prisma` file modified.
+    """
+
     TICKERS = "Tickers"
     FUNDAMENTALS = "Fundamentals"
     TRADING_CALENDAR = "TradingCalendar"
@@ -20,12 +24,12 @@ class StockDbUtils:
         """
         db = Prisma()
         await db.connect()
-
         _target = getattr(db, table.lower())
         result = await _target.create_many(data, skip_duplicates=True)
         await db.disconnect()
         return result
 
+    @staticmethod
     async def read(table: DbTable, where: dict = {}) -> List[dict]:
         """
         Read data from a given table
@@ -37,6 +41,7 @@ class StockDbUtils:
         await db.disconnect()
         return result
 
+    @staticmethod
     async def update(table: DbTable, where: dict, data: dict):
         """
         Update data from a given table
@@ -48,6 +53,7 @@ class StockDbUtils:
         await db.disconnect()
         return result
 
+    @staticmethod
     async def delete(table: DbTable, where: dict):
         """
         Delete data from a given table

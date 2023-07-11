@@ -15,23 +15,6 @@ class StockMarket:
     NYSE = "NYSE"
 
 
-class StockCommon:
-    """
-    Stock common utils
-    """
-
-    @staticmethod
-    async def get_stock_list(conditions: dict = {}) -> List[str]:
-        """
-        Get list of stocks from the database, based on the given conditions
-        """
-        stocks = await StockDbUtils.read(table="Tickers", where=conditions)
-        _stocks = [stock.dict() for stock in stocks]
-        stock_df = pd.DataFrame(_stocks)
-        stock_df = stock_df[~stock_df["ticker"].str.contains("\^")]
-        return stock_df["ticker"].tolist()
-
-
 class StockTickers:
     """
     Get the list of tickers from Nasdaq and NYSE

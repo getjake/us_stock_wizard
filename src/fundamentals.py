@@ -3,6 +3,7 @@ Get the fundamental data from Alpha Vantage API.
 The API Key shall be stored in the .env file.
 """
 import asyncio
+from datetime import datetime
 from io import StringIO
 import logging
 from time import sleep
@@ -166,5 +167,9 @@ class Fundamentals:
             )
             await StockDbUtils.insert(table=DbTable.FUNDAMENTALS, data=_annaul_reports)
         logging.info(f"Done for {stock}")
-
+        await StockDbUtils.update(
+            DbTable.TICKERS,
+            {"ticker": stock},
+            {"fundamentalsUpdatedAt": datetime.now()},
+        )
         return True
