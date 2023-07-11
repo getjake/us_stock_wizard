@@ -1,6 +1,6 @@
 httpx
 pandas
-dotenv
+python-dotenv
 yfinance
 prisma
 pandas-market-calendars
