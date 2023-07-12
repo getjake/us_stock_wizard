@@ -98,6 +98,32 @@ class KlineFetch:
         last_date = data.tail(1)["date"].values[0]
         return pd.to_datetime(last_date)
 
+    async def hanle_spx(self) -> None:
+        """
+        Download the SPX data
+        """
+        ticker = "^GSPC"
+        _data = self.get_ticker(ticker)
+        # Remove the data in the database
+        await StockDbUtils.delete(DbTable.DAILY_KLINE, {"ticker": ticker})
+
+        _data.reset_index(inplace=True)
+        _data = _data.rename(
+            columns={
+                "Open": "open",
+                "High": "high",
+                "Low": "low",
+                "Close": "close",
+                "Adj Close": "adjClose",
+                "Volume": "volume",
+                "Date": "date",
+            }
+        )
+        _data["ticker"] = "SPX"  # Change to SPX
+        _data["date"] = pd.to_datetime(_data["date"])
+        data_list = _data.to_dict("records")
+        await StockDbUtils.insert(DbTable.DAILY_KLINE, data_list)
+
     async def handle_ticker(self, ticker: str) -> None:
         """
         Handle a single ticker
