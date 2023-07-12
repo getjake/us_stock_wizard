@@ -127,7 +127,7 @@ class Fundamentals:
         params = {
             "function": "EARNINGS_CALENDAR",
             "horizon": "3month",
-            "apikey": "demo",
+            "apikey": self.keys[0],
         }
         response = httpx.get(self.BASE_URL, params=params)
         assert response.status_code == 200, "Failed to fetch data from API"

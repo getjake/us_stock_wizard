@@ -27,7 +27,20 @@ class KlineFetch:
         await self.get_all_tickers()
 
     async def get_all_tickers(self) -> List[str]:
-        tickers = await StockCommon.get_stock_list({"delisted": False})
+        """
+        Only get the tickers that need to be updated
+        """
+        tickers_df = await StockCommon.get_stock_list({"delisted": False}, format="df")
+        tickers_df["fundamentalsUpdatedAt"] = pd.to_datetime(
+            tickers_df["fundamentalsUpdatedAt"]
+        ).dt.date
+        df_to_update = tickers_df[
+            tickers_df["fundamentalsUpdatedAt"] < datetime.today().date()
+        ]
+        df_null = tickers_df[tickers_df["fundamentalsUpdatedAt"].isna()]
+        df_joint = pd.concat([df_null, df_to_update])
+        tickers = df_joint["ticker"].tolist()
+
         if not tickers:
             logging.info("No tickers found")
             return []
@@ -59,13 +72,13 @@ class KlineFetch:
         if (datetime.today() - _start).days > 90:
             logging.info(f"More than 90 days for {ticker}")
             return False
-
+        _start = pd.to_datetime(start).tz_localize("America/New_York")
         stock = yf.Ticker(ticker)
         _data = stock.history(period="3mo")
         _data.reset_index(inplace=True)
         # filter `Date` is larger than `start`
         _data["Date"] = pd.to_datetime(_data["Date"])
-        _data = _data[_data["Date"] >= start]
+        _data = _data[_data["Date"] >= _start]
         total_split = _data["Stock Splits"].sum()
         total_dividend = _data["Dividends"].sum()
         if total_dividend != 0 or total_split != 0:
@@ -144,10 +157,6 @@ class KlineFetch:
         """
         Get all ticker data from yfinance API. And insert them to database.
         """
-        print(self.tickers)
-        for ticker in self.tickers:
+        for ticker in self.tickers[:10]:
             await self.handle_ticker(ticker)
             sleep(2)
-
-            break
-        print("测试成功")
