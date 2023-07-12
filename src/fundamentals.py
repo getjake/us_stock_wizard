@@ -50,7 +50,7 @@ class Fundamentals:
         count = 0
         while count < len(self.keys):
             params["apikey"] = self.keys[self.key_index]
-            result = httpx.get(base_url, params=params)
+            result = httpx.get(base_url, params=params, timeout=10)
             if result.status_code == 200 and result.json().get("Note") is None:
                 return result.json()
             self.key_index += 1
