@@ -7,6 +7,7 @@ import asyncio
 from datetime import datetime
 from io import StringIO
 import logging
+logging.basicConfig(level=logging.INFO)
 from time import sleep
 from typing import List
 import httpx
@@ -172,9 +173,9 @@ class Fundamentals:
         """
         _data = pd.DataFrame(data)
         _data = _data.replace("None", 0)
-        _data["grossProfit"] = _data["grossProfit"].astype(int)
-        _data["netIncome"] = _data["netIncome"].astype(int)
-        _data["totalRevenue"] = _data["totalRevenue"].astype(int)
+        _data["grossProfit"] = _data["grossProfit"].astype(float).astype(int)
+        _data["netIncome"] = _data["netIncome"].astype(float).astype(int)
+        _data["totalRevenue"] = _data["totalRevenue"].astype(float).astype(int)
         _data["grossMaginRatio"] = _data["grossProfit"] / _data["totalRevenue"]
         _data = _data[
             ["fiscalDateEnding", "netIncome", "totalRevenue", "grossMaginRatio"]
