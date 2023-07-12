@@ -67,9 +67,9 @@ class Fundamentals:
         _data = data.T
         _data = _data[["Net Income", "Total Revenue", "Gross Profit"]]
         # Convert `"Net Income"` to int
-        _data["Net Income"] = _data["Net Income"].astype(int)
-        _data["Total Revenue"] = _data["Total Revenue"].astype(int)
-        _data["Gross Profit"] = _data["Gross Profit"].astype(int)
+        _data["Net Income"] = _data["Net Income"].astype(float).astype(int)
+        _data["Total Revenue"] = _data["Total Revenue"].astype(float).astype(int)
+        _data["Gross Profit"] = _data["Gross Profit"].astype(float).astype(int)
         _data.reset_index(inplace=True)
         _data = _data.rename(
             columns={

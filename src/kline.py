@@ -157,6 +157,6 @@ class KlineFetch:
         """
         Get all ticker data from yfinance API. And insert them to database.
         """
-        for ticker in self.tickers[:10]:
+        for ticker in self.tickers:
             await self.handle_ticker(ticker)
             sleep(2)
