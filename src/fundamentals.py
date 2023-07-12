@@ -2,6 +2,7 @@
 Get the fundamental data from Alpha Vantage API.
 The API Key shall be stored in the .env file.
 """
+
 import asyncio
 from datetime import datetime
 from io import StringIO
@@ -11,6 +12,7 @@ from typing import List
 import httpx
 import numpy as np
 import pandas as pd
+import yfinance as yf
 from us_stock_wizard import StockRootDirectory
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 from us_stock_wizard.src.common import StockCommon
@@ -40,7 +42,7 @@ class Fundamentals:
             return []
         return keys.split(",")
 
-    def _get_data(self, base_url: str, params: dict = {}) -> dict:
+    def _get_data_alphavantage(self, base_url: str, params: dict = {}) -> dict:
         """
         Get data from the given url
         """
@@ -57,16 +59,66 @@ class Fundamentals:
             sleep(2)  # Avoid hitting the API limit
         raise Exception(f"Failed to fetch data from API, params: {params}")
 
-    def get_is_data(self, stock: str) -> dict:
+    @staticmethod
+    def _process_yfinance_data(data: pd.DataFrame) -> List[dict]:
+        """
+        Process yfinance data to the format of alphavantage
+        """
+        _data = data.T
+        _data = _data[["Net Income", "Total Revenue", "Gross Profit"]]
+        # Convert `"Net Income"` to int
+        _data["Net Income"] = _data["Net Income"].astype(int)
+        _data["Total Revenue"] = _data["Total Revenue"].astype(int)
+        _data["Gross Profit"] = _data["Gross Profit"].astype(int)
+        _data.reset_index(inplace=True)
+        _data = _data.rename(
+            columns={
+                "index": "fiscalDateEnding",
+                "Net Income": "netIncome",
+                "Gross Profit": "grossProfit",
+                "Total Revenue": "totalRevenue",
+            }
+        )
+        _data = _data.astype(str)
+        _data = _data.replace("", "None")
+        return _data.to_dict(orient="records")
+
+    def _get_data_yfinance(self, stock: str) -> dict:
+        """
+        Get data from yfinance
+        """
+        ticker = yf.Ticker(stock)
+        quarterly_data = ticker.quarterly_income_stmt
+        annual_data = ticker.income_stmt
+
+        _ = {
+            "symbol": stock,
+            "annualReports": self._process_yfinance_data(annual_data),
+            "quarterlyReports": self._process_yfinance_data(quarterly_data),
+        }
+
+        return _
+
+    def get_is_data(self, stock: str, source: str = "yfinance") -> dict:
         """
         Get data from income statement
+
+        Args:
+            stock: The stock ticker
+            source: The source of the data, either "yfinance" or "alphavantage"
         """
-        params = {
-            "function": "INCOME_STATEMENT",
-            "symbol": stock,
-        }
-        result = self._get_data(self.BASE_URL, params=params)
-        return result
+        if source == "yfinance":
+            return self._get_data_yfinance(stock)
+        if source == "alphavantage":
+            params = {
+                "function": "INCOME_STATEMENT",
+                "symbol": stock,
+            }
+            result = self._get_data_alphavantage(self.BASE_URL, params=params)
+            return result
+        raise Exception(
+            f"Unknown source: {source}, only support `yfinance` or `alphavantage`"
+        )
 
     def get_earning_call_data(self) -> dict:
         """
@@ -143,18 +195,13 @@ class Fundamentals:
         )
         _data["ticker"] = ticker
         _data["reportType"] = report_type
-
-        # save to pickle
-        _data.to_pickle(f"{ticker}_{report_type}.pkl")
-
         return _data.to_dict(orient="records")
 
-    async def handle_is_data(self, stock: str) -> bool:
+    async def handle_is_data(self, stock: str, source: str = "yfinance") -> bool:
         """
         Process the Income Statement data, and save it into the database
         """
-        data = self.get_is_data(stock)
-        print(data)
+        data = self.get_is_data(stock, source=source)
         if not data:  # Maybe info not exist for the ticker.
             logging.error("No data found for %s", stock)
             await StockDbUtils.update(
@@ -194,7 +241,7 @@ class Fundamentals:
         )
         return True
 
-    async def handle_all_is_data(self) -> None:
+    async def handle_all_is_data(self, source: str = "alphavantage") -> None:
         """
         Process the Income Statement data for all tickers
         """
@@ -210,15 +257,22 @@ class Fundamentals:
         all_tickers_not_null = all_tickers[
             all_tickers["fundamentalsUpdatedAt"].notnull()
         ]
-        all_tickers_not_null["fundamentalsUpdatedAt"] = pd.to_datetime(
+        all_tickers_not_null.loc[:, "fundamentalsUpdatedAt"] = pd.to_datetime(
             all_tickers_not_null["fundamentalsUpdatedAt"]
         )
 
         # Handle null
-        for ticker in all_tickers_null["ticker"].tolist():
-            res = await self.handle_is_data(ticker)
+        null_list = all_tickers_null["ticker"].tolist()
+        # randomize the list
+        np.random.shuffle(null_list)
+        for ticker in null_list:
+            logging.info(f"Start for {ticker}")
+            await self.handle_is_data(ticker, source=source)
             # Always mark as succeed, even if failed
             logging.info(f"Done for {ticker}")
-            asyncio.sleep(10)
+            if source == "yfinance":
+                await asyncio.sleep(2)
+            else:
+                await asyncio.sleep(10)
 
         # Handle not null
