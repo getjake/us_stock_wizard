@@ -1,4 +1,3 @@
-import asyncio
 from prisma import Prisma
 from typing import List
 import pandas as pd

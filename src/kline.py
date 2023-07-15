@@ -68,23 +68,27 @@ class KlineFetch:
         """
         Check if the ticker has split or dividend after the given date, no more than 90 days
         """
-        _start = pd.to_datetime(start)
-        if (datetime.today() - _start).days > 90:
-            logging.info(f"More than 90 days for {ticker}")
+        try:
+            _start = pd.to_datetime(start)
+            if (datetime.today() - _start).days > 90:
+                logging.info(f"More than 90 days for {ticker}")
+                return False
+            _start = pd.to_datetime(start).tz_localize("America/New_York")
+            stock = yf.Ticker(ticker)
+            _data = stock.history(period="3mo")
+            _data.reset_index(inplace=True)
+            # filter `Date` is larger than `start`
+            _data["Date"] = pd.to_datetime(_data["Date"])
+            _data = _data[_data["Date"] >= _start]
+            total_split = _data["Stock Splits"].sum()
+            total_dividend = _data["Dividends"].sum()
+            if total_dividend != 0 or total_split != 0:
+                logging.info(f"{ticker} has split or dividend")
+                return True
             return False
-        _start = pd.to_datetime(start).tz_localize("America/New_York")
-        stock = yf.Ticker(ticker)
-        _data = stock.history(period="3mo")
-        _data.reset_index(inplace=True)
-        # filter `Date` is larger than `start`
-        _data["Date"] = pd.to_datetime(_data["Date"])
-        _data = _data[_data["Date"] >= _start]
-        total_split = _data["Stock Splits"].sum()
-        total_dividend = _data["Dividends"].sum()
-        if total_dividend != 0 or total_split != 0:
-            logging.info(f"{ticker} has split or dividend")
-            return True
-        return False
+        except Exception as e:
+            # Default to False
+            return False
 
     async def _check_last_update_date(self, ticker: str) -> Optional[datetime]:
         """
@@ -200,4 +204,4 @@ class KlineFetch:
         """
         for ticker in self.tickers:
             await self.handle_ticker(ticker)
-            sleep(2)
+            sleep(4)
