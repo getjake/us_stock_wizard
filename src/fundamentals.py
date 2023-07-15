@@ -312,4 +312,3 @@ class Fundamentals:
                 await asyncio.sleep(2)
             else:
                 await asyncio.sleep(10)
-        # @TODO
