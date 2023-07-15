@@ -1,7 +1,7 @@
 from typing import Optional, List
 import logging
 import pandas as pd
-from database.db_utils import StockDbUtils, DbTable
+from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,6 +16,7 @@ class FundamentalAnalyzer:
     Usage:
     >>> analyzer = FundamentalAnalyzer(ticker="AAPL")
     >>> await analyzer.get_fundamental()
+    >>> res: bool = analyzer.get_result([FundamentalMeasurements.CRITERIA_1])
 
     """
 

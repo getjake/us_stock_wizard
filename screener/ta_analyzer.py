@@ -2,12 +2,12 @@ from typing import Optional, List
 import logging
 import datetime
 import pandas as pd
-from database.db_utils import StockDbUtils, DbTable
+from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 
 logging.basicConfig(level=logging.INFO)
 
 
-class Measurements:
+class TaMeasurements:
     STAGE2 = "stage2"
 
 
@@ -17,7 +17,7 @@ class TaAnalyzer:
     Usage:
         >>> ta = TaAnalyzer("AAPL")
         >>> await ta.get_kline()
-        >>> res: bool = ta.get_result([Measurements.STAGE2])
+        >>> res: bool = ta.get_result([TaMeasurements.STAGE2])
     """
 
     def __init__(self, ticker: str) -> None:
@@ -36,13 +36,13 @@ class TaAnalyzer:
         self.kline = kline
 
     def get_result(
-        self, criteria: List[Measurements], date: Optional[str] = None
+        self, criteria: List[TaMeasurements], date: Optional[str] = None
     ) -> bool:
         """
         Get result of technical analysis
 
         Args:
-            criteria (List[Measurements]): List of criteria to be used
+            criteria (List[TaMeasurements]): List of criteria to be used
             date (Optional[str], optional): Date to be used. Defaults to None => today.
         """
         if self.kline is None:
@@ -60,7 +60,7 @@ class TaAnalyzer:
 
         combined_bool = []
         for cret in criteria:
-            if cret == Measurements.STAGE2:
+            if cret == TaMeasurements.STAGE2:
                 _ = self._cret_stage_2(kline)
                 combined_bool.append(_)
             else:

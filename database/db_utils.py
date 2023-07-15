@@ -13,6 +13,8 @@ class DbTable(str):
     TRADING_CALENDAR = "TradingCalendar"
     DAILY_KLINE = "DailyKline"
     EARNING_CALL = "EarningCall"
+    REPORT = "Report"
+    LOGGINGS = "Loggings"
 
 
 class StockDbUtils:

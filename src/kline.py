@@ -24,7 +24,7 @@ class KlineFetch:
         self.tickers = []
 
     async def initialize(self) -> None:
-        await self.get_all_tickers()
+        self.tickers = await self.get_all_tickers()
 
     async def get_all_tickers(self) -> List[str]:
         """
@@ -44,7 +44,7 @@ class KlineFetch:
         if not tickers:
             logging.info("No tickers found")
             return []
-        self.tickers = tickers
+        return tickers
 
     def get_ticker(self, ticker: str, start: Optional[datetime] = None) -> pd.DataFrame:
         """
