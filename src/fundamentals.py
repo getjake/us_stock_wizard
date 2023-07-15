@@ -7,6 +7,7 @@ import asyncio
 from datetime import datetime
 from io import StringIO
 import logging
+
 logging.basicConfig(level=logging.INFO)
 from time import sleep
 from typing import List
@@ -276,4 +277,37 @@ class Fundamentals:
             else:
                 await asyncio.sleep(10)
 
-        # Handle not null
+    async def update_is_data(
+        self, days_ago: int = 7, source: str = "alphavantage"
+    ) -> None:
+        """
+        Update the Income Statement data for tickers which has the earning call less than __ days.
+        """
+        # Get the earning call data
+        data = await StockDbUtils.read(table=DbTable.EARNING_CALL, output="df")
+        # Filter data >= days_ago and <= today
+        data["reportDate"] = pd.to_datetime(data["reportDate"]).dt.date
+        data = data[
+            (
+                data["reportDate"]
+                >= (pd.Timestamp.today() - pd.Timedelta(days=days_ago)).date()
+            )
+            & (data["reportDate"] <= pd.Timestamp.today().date())
+        ]
+        # Get the tickers
+        tickers: List[str] = data["ticker"].unique().tolist()
+        if not tickers:
+            logging.info("No tickers found, do not need to update")
+            return None
+
+        # Update the tickers
+
+        for ticker in tickers:
+            logging.info(f"Start for {ticker}")
+            await self.handle_is_data(ticker, source=source)
+            # Always mark as succeed, even if failed
+            logging.info(f"Done for {ticker}")
+            if source == "yfinance":
+                await asyncio.sleep(2)
+            else:
+                await asyncio.sleep(10)

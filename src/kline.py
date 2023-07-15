@@ -98,7 +98,7 @@ class KlineFetch:
         last_date = data.tail(1)["date"].values[0]
         return pd.to_datetime(last_date)
 
-    async def hanle_spx(self) -> None:
+    async def handle_spx(self) -> None:
         """
         Download the SPX data
         """
@@ -178,6 +178,21 @@ class KlineFetch:
         )
 
         return
+
+    async def update_all_tickers(self) -> None:
+        """
+        Update the tickers for all only after the trading day.
+        """
+        cal = await StockDbUtils.read(DbTable.TRADING_CALENDAR, output="df")
+        cal["date"] = pd.to_datetime(cal["date"]).dt.date
+        # check today in cal["date"]
+        today = pd.Timestamp.today().date()
+        is_today_trading = today in cal["date"].tolist()
+        if not is_today_trading:
+            logging.info("Today is not a trading day, skip")
+
+        await self.handle_spx()
+        await self.handle_all_tickers()
 
     async def handle_all_tickers(self) -> None:
         """
