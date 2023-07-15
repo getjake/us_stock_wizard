@@ -16,7 +16,7 @@ import pandas as pd
 import yfinance as yf
 from us_stock_wizard import StockRootDirectory
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
-from us_stock_wizard.src.common import StockCommon
+from us_stock_wizard.src.common import StockCommon, retry_decorator
 
 
 class ReportType:
@@ -43,6 +43,7 @@ class Fundamentals:
             return []
         return keys.split(",")
 
+    @retry_decorator(delay=5, failure_return_types=[])
     def _get_data_alphavantage(self, base_url: str, params: dict = {}) -> dict:
         """
         Get data from the given url
@@ -277,3 +278,4 @@ class Fundamentals:
                 await asyncio.sleep(10)
 
         # Handle not null
+        # @TODO
