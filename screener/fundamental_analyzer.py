@@ -1,9 +1,13 @@
-from typing import Optional
+from typing import Optional, List
 import logging
 import pandas as pd
 from database.db_utils import StockDbUtils, DbTable
 
 logging.basicConfig(level=logging.INFO)
+
+
+class FundamentalMeasurements:
+    CRITERIA_1 = "cret_1"
 
 
 class FundamentalAnalyzer:
@@ -57,6 +61,20 @@ class FundamentalAnalyzer:
         ].pct_change(periods=1)
 
         return fundamental
+
+    def get_result(self, criteria: List[FundamentalMeasurements]) -> bool:
+        """
+        Get result of fundamental analysis
+        """
+        if self.data is None:
+            return False
+        combined_bool = []
+        for cret in criteria:
+            if cret == FundamentalMeasurements.CRITERIA_1:
+                combined_bool.append(self.cret_1())
+            else:
+                raise ValueError(f"Unknown criteria: {cret}")
+        return all(combined_bool)
 
     def cret_1(self) -> bool:
         """

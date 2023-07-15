@@ -37,7 +37,7 @@ class TaAnalyzer:
 
     def get_result(
         self, criteria: List[Measurements], date: Optional[str] = None
-    ) -> pd.DataFrame:
+    ) -> bool:
         """
         Get result of technical analysis
 
@@ -62,6 +62,7 @@ class TaAnalyzer:
         for cret in criteria:
             if cret == Measurements.STAGE2:
                 _ = self._cret_stage_2(kline)
+                combined_bool.append(_)
             else:
                 raise ValueError(f"Unknown criteria: {cret}")
         return all(combined_bool)
