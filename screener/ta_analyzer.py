@@ -12,7 +12,13 @@ class Measurements:
 
 
 class TaAnalyzer:
-    """ """
+    """
+
+    Usage:
+        >>> ta = TaAnalyzer("AAPL")
+        >>> await ta.get_kline()
+        >>> res: bool = ta.get_result([Measurements.STAGE2])
+    """
 
     def __init__(self, ticker: str) -> None:
         self.ticker = ticker
@@ -48,7 +54,7 @@ class TaAnalyzer:
 
         date_included = kline[kline["date"] == _date]
         if date_included.empty:
-            raise ValueError(f"{_date} is not included in kline for {self.ticker}")
+            logging.warn(f"{_date} is not included in kline for {self.ticker}")
         kline = kline[kline["date"] <= _date]  # only use data before date
         kline = kline.sort_values(by="date", ascending=True)
 
