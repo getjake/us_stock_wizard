@@ -98,6 +98,32 @@ class KlineFetch:
         last_date = data.tail(1)["date"].values[0]
         return pd.to_datetime(last_date)
 
+    async def handle_spx(self) -> None:
+        """
+        Download the SPX data
+        """
+        ticker = "^GSPC"
+        _data = self.get_ticker(ticker)
+        # Remove the data in the database
+        await StockDbUtils.delete(DbTable.DAILY_KLINE, {"ticker": ticker})
+
+        _data.reset_index(inplace=True)
+        _data = _data.rename(
+            columns={
+                "Open": "open",
+                "High": "high",
+                "Low": "low",
+                "Close": "close",
+                "Adj Close": "adjClose",
+                "Volume": "volume",
+                "Date": "date",
+            }
+        )
+        _data["ticker"] = "SPX"  # Change to SPX
+        _data["date"] = pd.to_datetime(_data["date"])
+        data_list = _data.to_dict("records")
+        await StockDbUtils.insert(DbTable.DAILY_KLINE, data_list)
+
     async def handle_ticker(self, ticker: str) -> None:
         """
         Handle a single ticker
@@ -152,6 +178,21 @@ class KlineFetch:
         )
 
         return
+
+    async def update_all_tickers(self) -> None:
+        """
+        Update the tickers for all only after the trading day.
+        """
+        cal = await StockDbUtils.read(DbTable.TRADING_CALENDAR, output="df")
+        cal["date"] = pd.to_datetime(cal["date"]).dt.date
+        # check today in cal["date"]
+        today = pd.Timestamp.today().date()
+        is_today_trading = today in cal["date"].tolist()
+        if not is_today_trading:
+            logging.info("Today is not a trading day, skip")
+
+        await self.handle_spx()
+        await self.handle_all_tickers()
 
     async def handle_all_tickers(self) -> None:
         """

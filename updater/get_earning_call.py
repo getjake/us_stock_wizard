@@ -1,5 +1,7 @@
 """
 Update Earning Call data to database
+
+Update this script every 7 days.
 """
 
 import asyncio

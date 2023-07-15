@@ -18,6 +18,14 @@ class DbTable(str):
 
 class StockDbUtils:
     @staticmethod
+    def convert_to_dataframe(data: list) -> pd.DataFrame:
+        """
+        Convert the given data from database to dataframe
+        """
+        _data = [d.dict() for d in data]
+        return pd.DataFrame(_data)
+
+    @staticmethod
     async def insert(table: DbTable, data: List[dict]):
         """
         Insert list of data into a given table
@@ -30,16 +38,27 @@ class StockDbUtils:
         return result
 
     @staticmethod
-    async def read(table: DbTable, where: dict = {}) -> List[dict]:
+    async def read(
+        table: DbTable, where: dict = {}, output: str = "list"
+    ) -> List[dict]:
         """
         Read data from a given table
+
+        Args:
+            table (DbTable): table name
+            where (dict, optional): filter condition. Defaults to {}.
+            output (str, optional): output format. Defaults to "list". / "df
         """
         db = Prisma()
         await db.connect()
         _target = getattr(db, table.lower())
         result = await _target.find_many(where=where)
+        if output == "list":
+            _ = result
+        elif output == "df":
+            _ = StockDbUtils.convert_to_dataframe(result)
         await db.disconnect()
-        return result
+        return _
 
     @staticmethod
     async def update(table: DbTable, where: dict, data: dict):

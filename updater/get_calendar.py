@@ -1,5 +1,7 @@
 """
 Update Trading Calendar to database
+
+Run this script every 7 days.
 """
 
 import asyncio
