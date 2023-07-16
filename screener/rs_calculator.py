@@ -125,3 +125,22 @@ class RelativeStrengthCalculator:
         for date in self.calendar:
             if date >= start and date <= end:
                 await self.update_all_rs(date)
+
+
+async def main():
+    rs = RelativeStrengthCalculator()
+    await rs.initialize()
+    await rs.update_all_rs_in_range(
+        datetime.date(2023, 6, 1), datetime.date(2023, 7, 14)
+    )
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    logging.basicConfig(
+        level=logging.WARNING,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    asyncio.run(main())
