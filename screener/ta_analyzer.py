@@ -54,7 +54,7 @@ class TaAnalyzer:
 
         date_included = kline[kline["date"] == _date]
         if date_included.empty:
-            logging.warn(f"{_date} is not included in kline for {self.ticker}")
+            logging.warning(f"{_date} is not included in kline for {self.ticker}")
         kline = kline[kline["date"] <= _date]  # only use data before date
         kline = kline.sort_values(by="date", ascending=True)
 

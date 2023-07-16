@@ -80,4 +80,4 @@ class DailyScreener:
             ),
         }
         await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
-        logging.warn("Saved the succ. tickers to database")
+        logging.warning("Saved the succ. tickers to database")

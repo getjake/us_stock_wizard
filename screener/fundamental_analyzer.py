@@ -85,7 +85,7 @@ class FundamentalAnalyzer:
         """
         data = self.analyze()
         if data.empty:
-            logging.warn("No fundamental data found")
+            logging.warning("No fundamental data found")
             return False
 
         sales_yoy = data.iloc[-1]["sales_YoY"] > 0.2
