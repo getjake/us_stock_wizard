@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 import datetime
 from prisma import Json
+from sklearn.preprocessing import MinMaxScaler
 from us_stock_wizard.database.db_utils import DbTable, StockDbUtils
 from us_stock_wizard.src.stocks import TradingCalendar
 from us_stock_wizard.src.common import StockCommon
@@ -97,13 +98,16 @@ class RelativeStrengthCalculator:
         if not date:
             date = pd.Timestamp.today().date()
         rs_list = []
-        for ticker in self.stocks[:10]:
+        for ticker in self.stocks[:20]:
             rs = await self.get_rs(ticker, date)
             if rs:
-                rs_list.append({"ticker": ticker, "rscore": rs})
+                rs_list.append({"ticker": ticker, "rs": rs})
         rs_df = pd.DataFrame(rs_list)
+        rs_df["rank"] = rs_df["rs"].rank(ascending=True)
+        rs_df["rscore"] = rs_df["rank"] / len(rs_df["rank"]) * 100
+        rs_df["rscore"] = rs_df["rscore"].astype(int)
         rs_df["date"] = pd.Timestamp(date)
-        # Save to database
+        rs_df = rs_df[["date", "rscore", "ticker"]]
         if not rs_df.empty:
             await StockDbUtils.insert(
                 DbTable.RELATIVE_STRENGTH, rs_df.to_dict(orient="records")
