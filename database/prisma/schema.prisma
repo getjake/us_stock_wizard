@@ -86,6 +86,18 @@ model DailyKline {
   @@index([ticker, date])
 }
 
+model RelativeStrength {
+  id        String   @id @default(uuid())
+  ticker    String
+  date      DateTime @db.Date
+  rscore    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([ticker, date])
+  @@index([ticker, date])
+}
+
 model Report {
   id        String   @id @default(uuid())
   date      DateTime @db.Date
