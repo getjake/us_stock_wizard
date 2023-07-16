@@ -56,6 +56,9 @@ class RelativeStrengthCalculator:
         ticker: str,
         date: Optional[datetime.date] = None,
     ) -> Optional[float]:
+        """
+        Will not consider stocks with less than 252 trading days of data
+        """
         if not date:
             date = pd.Timestamp.today().date()
         if date not in self.calendar:
@@ -86,14 +89,35 @@ class RelativeStrengthCalculator:
         p9 = price_now / price_9m_ago
         p12 = price_now / price_12m_ago
         rs = 0.4 * p3 + 0.2 * p6 + 0.2 * p9 + 0.2 * p12
+        logging.warn(f"{ticker} RS: {rs} on date {date}")
         return rs
 
-    async def get_all_rs(self, date: datetime.date) -> pd.DataFrame:
+    async def update_all_rs(self, date: Optional[datetime.date] = None) -> pd.DataFrame:
         """ """
+        if not date:
+            date = pd.Timestamp.today().date()
         rs_list = []
-        for ticker in self.stocks:
+        for ticker in self.stocks[:10]:
             rs = await self.get_rs(ticker, date)
             if rs:
-                rs_list.append({"ticker": ticker, "rs": rs})
+                rs_list.append({"ticker": ticker, "rscore": rs})
         rs_df = pd.DataFrame(rs_list)
-        return rs_df
+        rs_df["date"] = pd.Timestamp(date)
+        # Save to database
+        if not rs_df.empty:
+            await StockDbUtils.insert(
+                DbTable.RELATIVE_STRENGTH, rs_df.to_dict(orient="records")
+            )
+            logging.warn(f"Done for {date}")
+        else:
+            logging.warn(f"No data for {date}")
+
+    async def update_all_rs_in_range(
+        self, start: datetime.date, end: datetime.date
+    ) -> None:
+        """
+        Update RS in a range
+        """
+        for date in self.calendar:
+            if date >= start and date <= end:
+                await self.update_all_rs(date)
