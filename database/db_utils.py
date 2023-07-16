@@ -15,6 +15,7 @@ class DbTable(str):
     EARNING_CALL = "EarningCall"
     REPORT = "Report"
     LOGGINGS = "Loggings"
+    RELATIVE_STRENGTH = "RelativeStrength"
 
 
 class StockDbUtils:
