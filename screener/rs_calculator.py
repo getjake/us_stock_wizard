@@ -3,7 +3,6 @@ import logging
 import pandas as pd
 import datetime
 from prisma import Json
-from sklearn.preprocessing import MinMaxScaler
 from us_stock_wizard.database.db_utils import DbTable, StockDbUtils
 from us_stock_wizard.src.stocks import TradingCalendar
 from us_stock_wizard.src.common import StockCommon
