@@ -121,10 +121,13 @@ class RelativeStrengthCalculator:
         """
         Update RS in a range
         """
-        for date in self.calendar:
-            if date >= start and date <= end:
-                await self.update_all_rs(date)
-
+        # for date in self.calendar:
+        #     if date >= start and date <= end:
+        #         # await self.update_all_rs(date)
+        #         print(date)
+        # date = datetime.date(2023, 7, 14)
+        # await self.update_all_rs(date)
+        pass
 
 async def main():
     rs = RelativeStrengthCalculator()

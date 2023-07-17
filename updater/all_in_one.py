@@ -75,7 +75,6 @@ async def main():
         return
     await get_tickers()
     await get_calendar()
-    await get_earning_call_fundamentals()
     await get_kline()
     await get_rs()
 
