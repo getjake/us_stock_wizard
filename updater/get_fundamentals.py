@@ -1,5 +1,5 @@
 """
-Update all fundamental data to database
+Update all earning call and fundamental data to database
 
 Run this script every 5 days.
 """

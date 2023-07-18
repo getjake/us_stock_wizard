@@ -40,7 +40,7 @@ class KlineFetch:
         df_null = tickers_df[tickers_df["fundamentalsUpdatedAt"].isna()]
         df_joint = pd.concat([df_null, df_to_update])
         tickers = df_joint["ticker"].tolist()
-
+        tickers = sorted(tickers)
         if not tickers:
             logging.info("No tickers found")
             return []
@@ -136,7 +136,11 @@ class KlineFetch:
         2. Get the data from yfinance API
         3. Insert the data to database
         """
+        today = datetime.today().strftime("%Y%m%d")
         last_update_date = await self._check_last_update_date(ticker)
+        if today == last_update_date.strftime("%Y%m%d"):
+            logging.warning(f"Ticker {ticker} alreadly updated kline. skipped.")
+            return
         _data = self.get_ticker(ticker, start=last_update_date)
         if _data.empty:
             logging.error(f"No data found for {ticker}")
@@ -147,7 +151,7 @@ class KlineFetch:
                 # Remove all data for this stock and download all!
                 await StockDbUtils.delete(DbTable.DAILY_KLINE, {"ticker": ticker})
                 _data = self.get_ticker(ticker)
-
+        
         _data.reset_index(inplace=True)
         _data = _data.rename(
             columns={
@@ -202,6 +206,10 @@ class KlineFetch:
         """
         Get all ticker data from yfinance API. And insert them to database.
         """
+        count = 0
+        total = len(self.tickers)
         for ticker in self.tickers:
+            count += 1
+            logging.warning(f"Downloading {count} of {total} ticker: {ticker}")
             await self.handle_ticker(ticker)
-            sleep(4)
+            sleep(1)
