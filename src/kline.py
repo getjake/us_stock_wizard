@@ -212,4 +212,3 @@ class KlineFetch:
             count += 1
             logging.warning(f"Downloading {count} of {total} ticker: {ticker}")
             await self.handle_ticker(ticker)
-            sleep(1)
