@@ -138,7 +138,7 @@ class KlineFetch:
         """
         today = datetime.today().strftime("%Y%m%d")
         last_update_date = await self._check_last_update_date(ticker)
-        if today == last_update_date.strftime("%Y%m%d"):
+        if last_update_date and today == last_update_date.strftime("%Y%m%d"):
             logging.warning(f"Ticker {ticker} alreadly updated kline. skipped.")
             return
         _data = self.get_ticker(ticker, start=last_update_date)
