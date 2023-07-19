@@ -151,7 +151,7 @@ class KlineFetch:
                 # Remove all data for this stock and download all!
                 await StockDbUtils.delete(DbTable.DAILY_KLINE, {"ticker": ticker})
                 _data = self.get_ticker(ticker)
-        
+
         _data.reset_index(inplace=True)
         _data = _data.rename(
             columns={
@@ -202,13 +202,26 @@ class KlineFetch:
         await self.handle_spx()
         await self.handle_all_tickers()
 
+    async def get_updated_ticker(self, date: Optional[datetime] = None) -> List[str]:
+        """
+        Get the tickers that has been updated on a date
+        """
+        if not date:
+            date = pd.Timestamp.today().normalize()
+        res: pd.DataFrame = await StockDbUtils.read(
+            DbTable.DAILY_KLINE, where={"date": date}, output="df"
+        )
+        return res["ticker"].tolist()
+
     async def handle_all_tickers(self) -> None:
         """
         Get all ticker data from yfinance API. And insert them to database.
         """
         count = 0
-        total = len(self.tickers)
-        for ticker in self.tickers:
+        updated_tickers = await self.get_updated_ticker()
+        to_update_tickers = list(set(self.tickers) - set(updated_tickers))
+        total = len(to_update_tickers)
+        for ticker in to_update_tickers:
             count += 1
             logging.warning(f"Downloading {count} of {total} ticker: {ticker}")
             await self.handle_ticker(ticker)

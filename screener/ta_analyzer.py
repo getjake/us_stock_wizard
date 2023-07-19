@@ -20,8 +20,9 @@ class TaAnalyzer:
         >>> res: bool = ta.get_result([TaMeasurements.STAGE2])
     """
 
-    def __init__(self, ticker: str) -> None:
+    def __init__(self, ticker: str, rs: Optional[float]) -> None:
         self.ticker = ticker
+        self.rs = rs or 0  # on the day's rs
         self.db_utils = StockDbUtils()
         self.kline: Optional[pd.DataFrame] = None
 
@@ -72,13 +73,14 @@ class TaAnalyzer:
         Mark's Trend Template for Stage 2
         Docs: https://docs.google.com/document/d/1sS7uMXzG1j626b1BYXUhr8lY2B-YlQkF9e7skFPlmig/edit#bookmark=id.7uewkhhvqexh
 
+        Mod: 满足 7 of 8 个条件就可以
         1. Stock price is above MA150 and MA200
         2. MA150 is above MA200
         3. MA200 is trending up for at least 1 month
         4. MA50 is above MA150
         5. Stock price is at least 25% above 52-week low.
         6. Stock price is within 25% of 52-week high.
-        7. RS (relative strength) is above 70. // Cannot be calculated here.
+        7. RS (relative strength) is above 70.
         8. Current price is above MA50.
         """
         # ma50, 150, 200
@@ -104,9 +106,9 @@ class TaAnalyzer:
 
         c_5 = latest["adjClose"] > latest["rolling_low"] * 1.25
         c_6 = latest["adjClose"] > latest["rolling_high"] * 0.75
-
+        c_7 = self.rs > 70
         c_8 = latest["adjClose"] > latest["ma50"]
 
         # Result
-        result = c_1 and c_2 and c_3 and c_4 and c_5 and c_6 and c_8
+        result = sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8]) >= 7
         return result
