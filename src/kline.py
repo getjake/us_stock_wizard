@@ -9,6 +9,7 @@ from time import sleep
 from typing import List, Optional
 import httpx
 import pandas as pd
+import asyncify
 import yfinance as yf
 from us_stock_wizard import StockRootDirectory
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
@@ -20,7 +21,7 @@ class KlineFetch:
     Check stock split and dividend
     """
 
-    def __init__(self) -> None:
+    def __init__(self, parallel: int = 2) -> None:
         self.tickers = []
 
     async def initialize(self) -> None:
@@ -46,7 +47,7 @@ class KlineFetch:
             return []
         return tickers
 
-    def get_ticker(self, ticker: str, start: Optional[datetime] = None) -> pd.DataFrame:
+    async def get_ticker(self, ticker: str, start: Optional[datetime] = None) -> pd.DataFrame:
         """
         Get ticker data from yfinance API.
         Please get the daily data after market close.
@@ -61,8 +62,12 @@ class KlineFetch:
             start = default
         else:
             start = pd.to_datetime(start).strftime("%Y-%m-%d")
-        result: pd.DataFrame = yf.download(ticker, start=start, end=tomorrow)
+        result: pd.DataFrame = await self.download_kline(ticker, start=start, end=tomorrow)
         return result
+
+    @asyncify
+    def download_kline(self, ticker, start, end):
+        return yf.download(ticker, start=start, end=end)
 
     def _check_split_dividend(self, ticker: str, start: str) -> bool:
         """
@@ -107,7 +112,7 @@ class KlineFetch:
         Download the SPX data
         """
         ticker = "^GSPC"
-        _data = self.get_ticker(ticker)
+        _data = await self.get_ticker(ticker)
         # Remove the data in the database
         await StockDbUtils.delete(DbTable.DAILY_KLINE, {"ticker": ticker})
 
@@ -141,7 +146,7 @@ class KlineFetch:
         if last_update_date and today == last_update_date.strftime("%Y%m%d"):
             logging.warning(f"Ticker {ticker} alreadly updated kline. skipped.")
             return
-        _data = self.get_ticker(ticker, start=last_update_date)
+        _data = await self.get_ticker(ticker, start=last_update_date)
         if _data.empty:
             logging.error(f"No data found for {ticker}")
             return
@@ -150,7 +155,7 @@ class KlineFetch:
             if _is_dividend_split:
                 # Remove all data for this stock and download all!
                 await StockDbUtils.delete(DbTable.DAILY_KLINE, {"ticker": ticker})
-                _data = self.get_ticker(ticker)
+                _data = await self.get_ticker(ticker)
 
         _data.reset_index(inplace=True)
         _data = _data.rename(
@@ -225,3 +230,4 @@ class KlineFetch:
             count += 1
             logging.warning(f"Downloading {count} of {total} ticker: {ticker}")
             await self.handle_ticker(ticker)
+  
