@@ -4,3 +4,4 @@ python-dotenv
 yfinance
 prisma
 pandas-market-calendars
+asyncify
