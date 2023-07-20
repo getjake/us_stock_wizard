@@ -82,6 +82,8 @@ class TaAnalyzer:
         6. Stock price is within 25% of 52-week high.
         7. RS (relative strength) is above 70.
         8. Current price is above MA50.
+        9. Stock Price > 10
+        10. Daily Volume USD > 1 million
         """
         # ma50, 150, 200
         kline = _kline.copy()
@@ -108,7 +110,9 @@ class TaAnalyzer:
         c_6 = latest["adjClose"] > latest["rolling_high"] * 0.75
         c_7 = self.rs > 70
         c_8 = latest["adjClose"] > latest["ma50"]
+        c_9 = latest["adjClose"] >= 10
+        c_10 = latest["adjClose"] * latest["volume"] >= 1000000
 
         # Result
-        result = sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8]) >= 8
+        result = sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10]) >= 10
         return result
