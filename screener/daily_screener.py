@@ -85,7 +85,7 @@ class DailyScreener:
             "kind": "DailyScreen",
             "data": Json(
                 {
-                    "desc": "Funda+TA",
+                    "desc": "TA8",
                     "tickers": self.succ_tickers,
                 }
             ),

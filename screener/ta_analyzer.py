@@ -73,7 +73,7 @@ class TaAnalyzer:
         Mark's Trend Template for Stage 2
         Docs: https://docs.google.com/document/d/1sS7uMXzG1j626b1BYXUhr8lY2B-YlQkF9e7skFPlmig/edit#bookmark=id.7uewkhhvqexh
 
-        Mod: 满足 7 of 8 个条件就可以
+        Mod: 满足 8 of 8 个条件就可以
         1. Stock price is above MA150 and MA200
         2. MA150 is above MA200
         3. MA200 is trending up for at least 1 month
@@ -110,5 +110,5 @@ class TaAnalyzer:
         c_8 = latest["adjClose"] > latest["ma50"]
 
         # Result
-        result = sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8]) >= 7
+        result = sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8]) >= 8
         return result
