@@ -106,7 +106,6 @@ model Report {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([date, kind])
   @@index([date, kind])
 }
 
