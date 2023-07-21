@@ -36,7 +36,7 @@ class DailyScreener:
         )
         self.stocks = await StockCommon.get_stock_list()
 
-    async def screen_stock_1(self, ticker: str) -> bool:
+    async def screen_stock(self, ticker: str) -> Dict[str, bool]:
         """
         SS#1:
         Will not consider any fundamental. Only consider technical analysis.
@@ -49,36 +49,11 @@ class DailyScreener:
             await ta.get_kline()
 
             # Choose the measurements to run
-            ta_succ = ta.get_result([TaMeasurements.STAGE2])
-            if ta_succ:
-                return True
-            else:
-                return False
+            succ_dict = ta.get_result()
+            return succ_dict
         except Exception as e:
             logging.error(f"Failed to screen stock {ticker}: {e}")
-            return False
-
-    async def screen_stock_2(self, ticker: str) -> bool:
-        """
-        SS#1:
-        Will not consider any fundamental. Only consider technical analysis.
-
-        Commented out the fundamental analysis part.
-        # funda = FundamentalAnalyzer(ticker=ticker)
-        """
-        try:
-            ta = TaAnalyzer(ticker=ticker, rs=self.rs_dict.get(ticker))
-            await ta.get_kline()
-
-            # Choose the measurements to run
-            ta_succ = ta.get_result([TaMeasurements.STAGE2])
-            if ta_succ:
-                return True
-            else:
-                return False
-        except Exception as e:
-            logging.error(f"Failed to screen stock {ticker}: {e}")
-            return False
+            return {}
 
     async def screen_all(self) -> List[str]:
         """
@@ -87,19 +62,22 @@ class DailyScreener:
         if not self.stocks:
             await self.initialize()
 
-        # 多种选股策略
-        ### 1
-        _ = []
-        kind = "TA10"
+        summary = pd.DataFrame()
         for ticker in self.stocks:
-            succ = await self.screen_stock_1(ticker)
-            print(f"{ticker}: {succ}")
-            if succ:
-                _.append(ticker)
+            _ = {"ticker": ticker}
+            _result = await self.screen_stock(ticker)
+            if not _result:
+                continue
+            _.update(_result)
+            _df = pd.DataFrame([_])
+            summary = pd.concat([summary, _df], ignore_index=True)
 
-        ### ...
-
-        self.succ_tickers[kind] = _
+        # Handle summary
+        summary.set_index("ticker", inplace=True)
+        cret: List[str] = summary.columns.tolist()
+        for kind in cret:
+            ticker_list = summary[summary[kind] == True].index.tolist()
+            self.succ_tickers[kind] = ticker_list
 
     async def save(self) -> None:
         """

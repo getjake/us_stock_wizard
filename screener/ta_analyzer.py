@@ -1,4 +1,6 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
+from enum import Enum
+from dateutil.relativedelta import relativedelta
 import logging
 import datetime
 import pandas as pd
@@ -7,8 +9,20 @@ from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 logging.basicConfig(level=logging.INFO)
 
 
-class TaMeasurements:
+class TaMeasurements(Enum):
+    """
+    Stage 2: Mark's Trend Template for Stage 2
+    MINERVINI_5M: MA200 is trending up for at least 5 month
+    MINERVINI_1M: MA200 is trending up for at least 1 month
+    """
+
     STAGE2 = "stage2"
+    MINERVINI_5M = "minervini_5m"
+    MINERVINI_1M = "minervini_1m"
+
+    @classmethod
+    def list(cls):
+        return [member.value for member in cls.__members__.values()]
 
 
 class TaAnalyzer:
@@ -17,14 +31,23 @@ class TaAnalyzer:
     Usage:
         >>> ta = TaAnalyzer("AAPL")
         >>> await ta.get_kline()
-        >>> res: bool = ta.get_result([TaMeasurements.STAGE2])
+        >>> res: dict[] = ta.get_result()
     """
 
-    def __init__(self, ticker: str, rs: Optional[float]) -> None:
+    def __init__(
+        self, ticker: str, rs: Optional[float] = 0, cret: List[TaMeasurements] = []
+    ) -> None:
+        """
+        Args:
+            ticker (str): Ticker
+            rs (Optional[float]): Today's Relative strength score
+            cret: List of criteria to be used
+        """
         self.ticker = ticker
         self.rs = rs or 0  # on the day's rs
         self.db_utils = StockDbUtils()
         self.kline: Optional[pd.DataFrame] = None
+        self.cret: List[TaMeasurements] = cret or TaMeasurements.list()
 
     async def get_kline(self) -> None:
         """
@@ -36,14 +59,11 @@ class TaAnalyzer:
         kline["date"] = pd.to_datetime(kline["date"]).dt.date
         self.kline = kline
 
-    def get_result(
-        self, criteria: List[TaMeasurements], date: Optional[str] = None
-    ) -> bool:
+    def get_result(self, date: Optional[str] = None) -> Dict[TaMeasurements, bool]:
         """
         Get result of technical analysis
 
         Args:
-            criteria (List[TaMeasurements]): List of criteria to be used
             date (Optional[str], optional): Date to be used. Defaults to None => today.
         """
         if self.kline is None:
@@ -59,14 +79,21 @@ class TaAnalyzer:
         kline = kline[kline["date"] <= _date]  # only use data before date
         kline = kline.sort_values(by="date", ascending=True)
 
-        combined_bool = []
-        for cret in criteria:
-            if cret == TaMeasurements.STAGE2:
+        result = {}
+        for cret in self.cret:
+            if cret == TaMeasurements.STAGE2.value:
                 _ = self._cret_stage_2(kline)
-                combined_bool.append(_)
+                result[cret] = _
+            elif cret == TaMeasurements.MINERVINI_5M.value:
+                _ = self._cret_minervini(kline, months=5)
+                result[cret] = _
+            elif cret == TaMeasurements.MINERVINI_1M.value:
+                _ = self._cret_minervini(kline, months=1)
+                result[cret] = _
+
             else:
                 raise ValueError(f"Unknown criteria: {cret}")
-        return all(combined_bool)
+        return result
 
     def _cret_stage_2(self, _kline: pd.DataFrame) -> bool:
         """
@@ -98,14 +125,11 @@ class TaAnalyzer:
         latest = kline.iloc[-1]
         c_1 = latest["adjClose"] > latest["ma150"]
         c_2 = latest["ma150"] > latest["ma200"]
-
         # c_3
         ma200 = kline["ma200"]
         ma200 = ma200[-20:]  # last 20 days
         c_3 = ma200.iloc[0] < ma200.iloc[-1]
-
         c_4 = latest["ma50"] > latest["ma150"]
-
         c_5 = latest["adjClose"] > latest["rolling_low"] * 1.25
         c_6 = latest["adjClose"] > latest["rolling_high"] * 0.75
         c_7 = self.rs > 70
@@ -116,3 +140,19 @@ class TaAnalyzer:
         # Result
         result = sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10]) >= 10
         return result
+
+    def _cret_minervini(self, _kline: pd.DataFrame, months: int) -> bool:
+        """
+        MINERVINI_5M: MA200 is trending up for at least 5 month
+        """
+        # 200
+        kline = _kline.copy()
+        kline["ma200"] = kline["adjClose"].rolling(200).mean()
+        end_date = pd.to_datetime("today").date()
+        start_date = pd.to_datetime(end_date - relativedelta(months=months)).date()
+        df_last_5_months = kline[
+            (kline["date"] >= start_date) & (kline["date"] <= end_date)
+        ]
+        df_last_5_months = df_last_5_months[["ma200"]].iloc[::10, :]  # 10 days interval
+        res: bool = df_last_5_months["ma200"].is_monotonic_increasing
+        return res
