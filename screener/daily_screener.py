@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 import logging
 import pandas as pd
 import datetime
@@ -20,7 +20,7 @@ class DailyScreener:
 
     def __init__(self) -> None:
         self.stocks: Optional[List[str]] = None
-        self.succ_tickers: Optional[List[str]] = None
+        self.succ_tickers: Dict[str, List[str]] = {}  # 选股结果
         self.rs_dict: Optional[dict] = {}
 
     async def initialize(self) -> None:
@@ -36,8 +36,31 @@ class DailyScreener:
         )
         self.stocks = await StockCommon.get_stock_list()
 
-    async def screen_stock(self, ticker: str) -> bool:
+    async def screen_stock_1(self, ticker: str) -> bool:
         """
+        SS#1:
+        Will not consider any fundamental. Only consider technical analysis.
+
+        Commented out the fundamental analysis part.
+        # funda = FundamentalAnalyzer(ticker=ticker)
+        """
+        try:
+            ta = TaAnalyzer(ticker=ticker, rs=self.rs_dict.get(ticker))
+            await ta.get_kline()
+
+            # Choose the measurements to run
+            ta_succ = ta.get_result([TaMeasurements.STAGE2])
+            if ta_succ:
+                return True
+            else:
+                return False
+        except Exception as e:
+            logging.error(f"Failed to screen stock {ticker}: {e}")
+            return False
+
+    async def screen_stock_2(self, ticker: str) -> bool:
+        """
+        SS#1:
         Will not consider any fundamental. Only consider technical analysis.
 
         Commented out the fundamental analysis part.
@@ -64,31 +87,32 @@ class DailyScreener:
         if not self.stocks:
             await self.initialize()
 
-        succ_tickers = []
+        # 多种选股策略
+        ### 1
+        _ = []
+        kind = "TA10"
         for ticker in self.stocks:
-            succ = await self.screen_stock(ticker)
+            succ = await self.screen_stock_1(ticker)
             print(f"{ticker}: {succ}")
             if succ:
-                succ_tickers.append(ticker)
+                _.append(ticker)
 
-        self.succ_tickers = succ_tickers
+        ### ...
+
+        self.succ_tickers[kind] = _
 
     async def save(self) -> None:
         """
-        Save the succ. tickers to csv file
+        Save all the succ. tickers to csv file
         """
         if not self.succ_tickers:
             await self.screen_all()
 
-        _ = {
-            "date": pd.to_datetime(datetime.date.today()),
-            "kind": "DailyScreen",
-            "data": Json(
-                {
-                    "desc": "TA10",
-                    "tickers": self.succ_tickers,
-                }
-            ),
-        }
-        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
+        for kind, tickers in self.succ_tickers.items():
+            _ = {
+                "date": pd.to_datetime(datetime.date.today()),
+                "kind": kind,
+                "data": Json(tickers),
+            }
+            await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
         logging.warning("Saved the succ. tickers to database")
