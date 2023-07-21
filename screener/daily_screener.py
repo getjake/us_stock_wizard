@@ -84,7 +84,8 @@ class DailyScreener:
         Save all the succ. tickers to csv file
         """
         if not self.succ_tickers:
-            await self.screen_all()
+            logging.warning("No succ. tickers found, skip saving")
+            return
 
         for kind, tickers in self.succ_tickers.items():
             _ = {

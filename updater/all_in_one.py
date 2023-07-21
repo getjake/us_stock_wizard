@@ -20,6 +20,7 @@ from us_stock_wizard.src.stocks import TradingCalendar
 from us_stock_wizard.src.fundamentals import Fundamentals
 from us_stock_wizard.src.kline import KlineFetch
 from us_stock_wizard.screener.rs_calculator import RelativeStrengthCalculator
+from us_stock_wizard.screener.daily_screener import DailyScreener
 
 
 async def check_trading_day() -> bool:
@@ -69,6 +70,14 @@ async def get_rs():
     await rs.update_all_rs()
 
 
+async def screen():
+    ds = DailyScreener()
+    await ds.initialize()
+    await ds.screen_all()
+    await ds.save()
+    logging.info("Done Screening")
+
+
 async def main():
     is_trading_day = await check_trading_day()
     if not is_trading_day:
@@ -77,6 +86,7 @@ async def main():
     await get_calendar()
     await get_kline()
     await get_rs()
+    await screen()
 
 
 if __name__ == "__main__":
