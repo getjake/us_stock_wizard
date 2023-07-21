@@ -14,11 +14,13 @@ class TaMeasurements(Enum):
     Stage 2: Mark's Trend Template for Stage 2
     MINERVINI_5M: MA200 is trending up for at least 5 month
     MINERVINI_1M: MA200 is trending up for at least 1 month
+    SEVEN_DAY_LOW_VOLATILITY: 最近 7 天最高价 - 最低价 不超过 10%
     """
 
     STAGE2 = "stage2"
     MINERVINI_5M = "minervini_5m"
     MINERVINI_1M = "minervini_1m"
+    SEVEN_DAY_LOW_VOLATILITY = "seven_day_low_volatility"
 
     @classmethod
     def list(cls):
@@ -90,7 +92,9 @@ class TaAnalyzer:
             elif cret == TaMeasurements.MINERVINI_1M.value:
                 _ = self._cret_minervini(kline, months=1)
                 result[cret] = _
-
+            elif cret == TaMeasurements.SEVEN_DAY_LOW_VOLATILITY.value:
+                _ = self._cret_days_vol(kline, days=7, vol=0.1)
+                result[cret] = _
             else:
                 raise ValueError(f"Unknown criteria: {cret}")
         return result
@@ -143,9 +147,8 @@ class TaAnalyzer:
 
     def _cret_minervini(self, _kline: pd.DataFrame, months: int) -> bool:
         """
-        MINERVINI_5M: MA200 is trending up for at least 5 month
+        MINERVINI_xM: MA200 is trending up for at least x month
         """
-        # 200
         kline = _kline.copy()
         kline["ma200"] = kline["adjClose"].rolling(200).mean()
         end_date = pd.to_datetime("today").date()
@@ -155,4 +158,16 @@ class TaAnalyzer:
         ]
         df_last_5_months = df_last_5_months[["ma200"]].iloc[::10, :]  # 10 days interval
         res: bool = df_last_5_months["ma200"].is_monotonic_increasing
+        return res
+
+    def _cret_days_vol(self, _kline: pd.DataFrame, days: int, vol: float) -> bool:
+        """
+        检查最近 n 天的波动率
+        """
+        kline = _kline.copy()
+        # Get the last `days` row
+        kline = kline.iloc[-days:, :]
+        high = kline.high.max()
+        low = kline.low.min()
+        res = high / low <= 1 + vol
         return res
