@@ -1,11 +1,65 @@
+import json
+import time
+import hmac
+import hashlib
+import base64
+import urllib.parse
+import httpx
+import json
 import logging
 import asyncio
-from typing import List, Optional
 import pandas as pd
 import time
 from functools import wraps
-from typing import Any, Dict, List, Optional, TypedDict, Callable
+from typing import Any, Dict, List, Optional, TypedDict, Callable, Tuple
+from us_stock_wizard import StockRootDirectory
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
+
+
+class DingTalkBot:
+    """
+    DingTalk Bot
+
+    Example:
+    ```
+    import asyncio
+
+    async def main():
+        bot = DingTalkBot()
+        response = await bot.send_msg('Hello, world!')
+
+    asyncio.run(main())
+    ```
+    """
+
+    def __init__(self):
+        env = StockRootDirectory.env()
+        self.apikey = env["DINGTALK_KEY"]
+        self.secret = env["DINGTALK_SECRET"]
+
+    def get_sign(self) -> Tuple[str, str]:
+        # Get the sign based on secret
+        timestamp = str(round(time.time() * 1000))
+        secret_enc = self.secret.encode("utf-8")
+        string_to_sign = "{}\n{}".format(timestamp, self.secret)
+        string_to_sign_enc = string_to_sign.encode("utf-8")
+        hmac_code = hmac.new(
+            secret_enc, string_to_sign_enc, digestmod=hashlib.sha256
+        ).digest()
+        sign = urllib.parse.quote_plus(base64.b64encode(hmac_code))
+        return timestamp, sign
+
+    async def send_msg(self, msg: str) -> bool:
+        timestamp, sign = self.get_sign()
+        url = f"https://oapi.dingtalk.com/robot/send?access_token={self.apikey}&timestamp={timestamp}&sign={sign}"
+        headers = {"Content-Type": "application/json"}
+        body = {"msgtype": "text", "text": {"content": msg}}
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=headers, data=json.dumps(body))
+        result: dict = response.json()
+        if result["errcode"] != 0:
+            return False
+        return True
 
 
 def create_xlsx_file(multi_data: Dict[str, pd.DataFrame], file_path: str):

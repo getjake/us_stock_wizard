@@ -6,6 +6,7 @@ Please Exec it after market close on trading day
 4. Get Fundamental
 3. Get Kline
 5. Get RS
+6. Screen
 
 --
 Run screening.
@@ -21,6 +22,10 @@ from us_stock_wizard.src.fundamentals import Fundamentals
 from us_stock_wizard.src.kline import KlineFetch
 from us_stock_wizard.screener.rs_calculator import RelativeStrengthCalculator
 from us_stock_wizard.screener.daily_screener import DailyScreener
+from us_stock_wizard.screener.post_analysis import PostAnalysis
+from us_stock_wizard.src.common import DingTalkBot
+
+bot = DingTalkBot()
 
 
 async def check_trading_day() -> bool:
@@ -78,15 +83,26 @@ async def screen():
     logging.info("Done Screening")
 
 
+async def run_post_analysis():
+    pa = PostAnalysis()
+    await pa.analyze_all()
+
+
 async def main():
-    is_trading_day = await check_trading_day()
-    if not is_trading_day:
-        return
-    await get_tickers()
-    await get_calendar()
-    await get_kline()
-    await get_rs()
-    await screen()
+    try:
+        is_trading_day = await check_trading_day()
+        if not is_trading_day:
+            return
+        await get_tickers()
+        await get_calendar()
+        await get_kline()
+        await get_rs()
+        await screen()
+        await run_post_analysis()
+        await bot.send_msg("US Stocks Done All")
+    except Exception as e:
+        err = f"US Stocks All Error: {e}"
+        await bot.send_msg(err)
 
 
 if __name__ == "__main__":
