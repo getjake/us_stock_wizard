@@ -26,6 +26,7 @@ class KlineFetch:
     def __init__(self, parallel: int = 1) -> None:
         self.parallel = parallel
         self.tickers = []
+        self.cache = pd.DataFrame()
 
     async def initialize(self) -> None:
         self.tickers = await self.get_all_tickers()
@@ -51,7 +52,7 @@ class KlineFetch:
         return tickers
 
     async def get_ticker(
-        self, ticker: str, start: Optional[datetime] = None
+        self, ticker: str, start: Optional[datetime] = None, cache: bool = False
     ) -> pd.DataFrame:
         """
         Get ticker data from yfinance API.
@@ -67,10 +68,16 @@ class KlineFetch:
             start = default
         else:
             start = pd.to_datetime(start).strftime("%Y-%m-%d")
-        result: pd.DataFrame = await self.download_kline(
-            ticker, start=start, end=tomorrow
-        )
-        return result
+
+        if cache and not self.cache.empty and ticker in self.cache:
+            data = self.cache[ticker]
+            data = data[start:tomorrow]
+            return data
+        else:
+            result: pd.DataFrame = await self.download_kline(
+                ticker, start=start, end=tomorrow
+            )
+            return result
 
     @asyncify
     def download_kline(self, ticker, start, end) -> pd.DataFrame:
@@ -153,7 +160,7 @@ class KlineFetch:
         if last_update_date and today == last_update_date.strftime("%Y%m%d"):
             logging.warning(f"Ticker {ticker} alreadly updated kline. skipped.")
             return
-        _data = await self.get_ticker(ticker, start=last_update_date)
+        _data = await self.get_ticker(ticker, start=last_update_date, cache=True)
         if _data.empty:
             logging.error(f"No data found for {ticker}")
             return
@@ -227,6 +234,12 @@ class KlineFetch:
             return []
         return res["ticker"].tolist()
 
+    def download_cache(self, tickers: List[str]) -> None:
+        """
+        Download the data for the given tickers and store them in cache
+        """
+        self.cache = yf.download(tickers, period="3mo", group_by="ticker", threads=True)
+
     async def handle_all_tickers(self) -> None:
         """
         Get all ticker data from yfinance API. And insert them to database.
@@ -251,7 +264,16 @@ class KlineFetch:
             count = 0
             for pair in ticker_pairs:
                 count += 1
-                logging.warning(f"Downloading pair {pair}: {count} / {len(ticker_pairs)}")
-                await asyncio.gather(
-                    *(self.handle_ticker(ticker) for ticker in pair)
-                )  # Run for each pair concurrently
+                logging.warning(
+                    f"Downloading pair {pair}: {count} / {len(ticker_pairs)}"
+                )
+                self.download_cache(pair)
+                for _ticker in pair:
+                    await self.handle_ticker(_ticker)
+                # await asyncio.gather(
+                #     *(self.handle_ticker(ticker) for ticker in pair)
+                # )  # Run for each pair concurrently
+                logging.warning(f"Done pair {pair}")
+                await asyncio.sleep(
+                    1
+                )  # Sleep for 1 second to avoid being blocked by yfinance
