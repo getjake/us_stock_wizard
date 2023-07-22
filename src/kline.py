@@ -22,6 +22,7 @@ class KlineFetch:
     """
 
     def __init__(self, parallel: int = 2) -> None:
+        self.parallel = parallel
         self.tickers = []
 
     async def initialize(self) -> None:
@@ -47,7 +48,9 @@ class KlineFetch:
             return []
         return tickers
 
-    async def get_ticker(self, ticker: str, start: Optional[datetime] = None) -> pd.DataFrame:
+    async def get_ticker(
+        self, ticker: str, start: Optional[datetime] = None
+    ) -> pd.DataFrame:
         """
         Get ticker data from yfinance API.
         Please get the daily data after market close.
@@ -62,7 +65,9 @@ class KlineFetch:
             start = default
         else:
             start = pd.to_datetime(start).strftime("%Y-%m-%d")
-        result: pd.DataFrame = await self.download_kline(ticker, start=start, end=tomorrow)
+        result: pd.DataFrame = await self.download_kline(
+            ticker, start=start, end=tomorrow
+        )
         return result
 
     @asyncify
@@ -226,8 +231,20 @@ class KlineFetch:
         updated_tickers = await self.get_updated_ticker()
         to_update_tickers = list(set(self.tickers) - set(updated_tickers))
         total = len(to_update_tickers)
-        for ticker in to_update_tickers:
-            count += 1
-            logging.warning(f"Downloading {count} of {total} ticker: {ticker}")
-            await self.handle_ticker(ticker)
-  
+
+        # Old way
+        if self.parallel < 2:
+            for ticker in to_update_tickers:
+                count += 1
+                logging.warning(f"Downloading {count} of {total} ticker: {ticker}")
+                await self.handle_ticker(ticker)
+        else:
+            # New way Concurrently
+            ticker_pairs = [
+                to_update_tickers[n : n + self.parallel]
+                for n in range(0, len(to_update_tickers), 2)
+            ]  # Group tickers into pairs
+            for pair in ticker_pairs:
+                await asyncio.gather(
+                    *(self.handle_ticker(ticker) for ticker in pair)
+                )  # Run for each pair concurrently
