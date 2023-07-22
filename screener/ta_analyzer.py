@@ -153,11 +153,11 @@ class TaAnalyzer:
         kline["ma200"] = kline["adjClose"].rolling(200).mean()
         end_date = pd.to_datetime("today").date()
         start_date = pd.to_datetime(end_date - relativedelta(months=months)).date()
-        df_last_5_months = kline[
+        df_last_n_months = kline[
             (kline["date"] >= start_date) & (kline["date"] <= end_date)
         ]
-        df_last_5_months = df_last_5_months[["ma200"]].iloc[::10, :]  # 10 days interval
-        res: bool = df_last_5_months["ma200"].is_monotonic_increasing
+        df_last_n_months = df_last_n_months[["ma200"]].iloc[::10, :]  # 10 days interval
+        res: bool = df_last_n_months["ma200"].is_monotonic_increasing
         return res
 
     def _cret_days_vol(self, _kline: pd.DataFrame, days: int, vol: float) -> bool:

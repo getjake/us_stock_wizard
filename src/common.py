@@ -8,6 +8,31 @@ from typing import Any, Dict, List, Optional, TypedDict, Callable
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 
 
+def create_xlsx_file(multi_data: Dict[str, pd.DataFrame], file_path: str):
+    """
+    Create Customize Excel File
+
+    Args:
+        multi_data (Dict[str, pd.DataFrame]): key is table, value is dataframe
+        file_path (str): file path, e.g. /path/to/file.xlsx
+    """
+    if not multi_data:
+        logging.warning("No data to create file")
+        return False
+    if not file_path.endswith(".xlsx"):
+        file_path = f"{file_path}.xlsx"
+    writer = pd.ExcelWriter(file_path, engine="xlsxwriter")
+
+    for table, data in multi_data.items():
+        data.to_excel(writer, sheet_name=table)
+        # workbook = writer.book
+        worksheet = writer.sheets[table]
+        worksheet.freeze_panes(1, 0)  # Freeze the first row
+
+    writer.close()
+    return True
+
+
 def retry_decorator(
     retries: int = 2, delay: int = 1, failure_return_types: List[Any] = [None]
 ):

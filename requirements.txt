@@ -5,3 +5,5 @@ yfinance
 prisma
 pandas-market-calendars
 asyncify
+google-api-python-client
+XlsxWriter

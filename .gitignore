@@ -1,3 +1,4 @@
+googleauth.json
 config.json
 # Airflow configuration
 airflow.cfg
