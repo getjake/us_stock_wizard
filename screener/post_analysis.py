@@ -3,6 +3,7 @@ Post Analysis to get what we really want!
 """
 import asyncio
 import tempfile
+from collections import defaultdict
 from prisma import Json
 from typing import Optional, List, Dict
 import datetime
@@ -26,6 +27,7 @@ class PostAnalysis:
         self.date = date or datetime.date.today()
         self.date_str = self.date.strftime("%Y-%m-%d")
         self.date_ts = pd.Timestamp(self.date)
+        self.to_save: Dict[str, pd.DataFrame] = defaultdict(lambda: pd.DataFrame())
 
     async def analyze_all(self) -> Dict[str, pd.DataFrame]:
         """
@@ -33,13 +35,13 @@ class PostAnalysis:
 
         Customize it!
         """
-        stage2 = await self.analyze_stage2()
-        to_save = {"stage2": stage2}
+        await self.analyze_stage2()
+        await self.analyze_stage2_diff()
 
         # Create excel file to tempdir
         with tempfile.TemporaryDirectory() as tempdir:
             file_path = f"{tempdir}/report.xlsx"
-            create_xlsx_file(to_save, file_path)
+            create_xlsx_file(self.to_save, file_path)
             self.gdrive.upload(file_path, f"PostAnalysis_{self.date_str}.xlsx")
 
     async def analyze_stage2(self) -> pd.DataFrame:
@@ -118,7 +120,51 @@ class PostAnalysis:
             "data": Json(tickers),
         }
         await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
+
+        # Save to self.to_save
+        self.to_save["stage2"] = stage2_ni_lt_0
         return stage2_ni_lt_0
+
+    async def analyze_stage2_diff(self) -> pd.DataFrame:
+        """
+        把stage2的数据和上一次的数据对比, 看看哪些股票是新的
+        """
+        # Get stage2 data
+        stage2s: pd.DataFrame = await StockDbUtils.read(
+            table=DbTable.REPORT,
+            where={"kind": "PostAnalysis_stage2"},
+            output="df",
+        )
+        stage2s = stage2s.sort_values(by="date", ascending=True)
+        stage2s = stage2s.tail(2)
+        if stage2s.shape[0] < 2:
+            print("Not enough data to compare. Skip.")
+            return pd.DataFrame()
+
+        latest: List[str] = stage2s.iloc[-1]["data"]
+        previous: List[str] = stage2s.iloc[-2]["data"]
+        diff = list(set(latest) - set(previous))
+        if len(diff) == 0:
+            print("No diff. Skip.")
+
+        # Save to databse
+        _ = {
+            "date": pd.to_datetime(self.date),
+            "kind": "PostAnalysis_stage2_diff",
+            "data": Json(diff),
+        }
+        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
+
+        if self.to_save["stage2"].empty:
+            print("No stage2 data. Skip.")
+            return pd.DataFrame()
+
+        _df = self.to_save["stage2"].copy()
+        _df = _df[_df["ticker"].isin(diff)]
+        # Save to self.to_save
+        self.to_save["stage2_diff"] = _df
+
+        return pd.DataFrame(_df)
 
 
 async def main():

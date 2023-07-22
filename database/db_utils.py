@@ -42,7 +42,7 @@ class StockDbUtils:
     @staticmethod
     async def read(
         table: DbTable, where: dict = {}, output: str = "list"
-    ) -> List[dict]:
+    ) -> List[dict] | pd.DataFrame:
         """
         Read data from a given table
 
