@@ -221,6 +221,8 @@ class KlineFetch:
         res: pd.DataFrame = await StockDbUtils.read(
             DbTable.DAILY_KLINE, where={"date": date}, output="df"
         )
+        if res.empty:
+            return []
         return res["ticker"].tolist()
 
     async def handle_all_tickers(self) -> None:
