@@ -19,9 +19,11 @@ from us_stock_wizard.src.common import StockCommon
 class KlineFetch:
     """
     Check stock split and dividend
+
+    parallel 2 => bug, do not use it!
     """
 
-    def __init__(self, parallel: int = 2) -> None:
+    def __init__(self, parallel: int = 1) -> None:
         self.parallel = parallel
         self.tickers = []
 
@@ -71,7 +73,7 @@ class KlineFetch:
         return result
 
     @asyncify
-    def download_kline(self, ticker, start, end):
+    def download_kline(self, ticker, start, end) -> pd.DataFrame:
         return yf.download(ticker, start=start, end=end)
 
     def _check_split_dividend(self, ticker: str, start: str) -> bool:
@@ -246,7 +248,10 @@ class KlineFetch:
                 to_update_tickers[n : n + self.parallel]
                 for n in range(0, len(to_update_tickers), 2)
             ]  # Group tickers into pairs
+            count = 0
             for pair in ticker_pairs:
+                count += 1
+                logging.warning(f"Downloading pair {pair}: {count} / {len(ticker_pairs)}")
                 await asyncio.gather(
                     *(self.handle_ticker(ticker) for ticker in pair)
                 )  # Run for each pair concurrently
