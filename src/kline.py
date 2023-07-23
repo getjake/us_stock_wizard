@@ -34,6 +34,10 @@ class KlineFetch:
     async def initialize(self) -> None:
         self.tickers = await self.get_all_tickers()
 
+    @staticmethod
+    def split_list(my_list: List[str], count: int) -> List[List[str]]:
+        return [my_list[i : i + count] for i in range(0, len(my_list), count)]
+
     async def get_all_tickers(self) -> List[str]:
         """
         Only get the tickers that need to be updated
@@ -246,7 +250,7 @@ class KlineFetch:
         if res.empty:
             return []
         result = res["ticker"].tolist()
-        lst = [x for x in result if '/' not in x]
+        lst = [x for x in result if "/" not in x]
         return lst
 
     def download_cache(self, tickers: List[str]) -> None:
@@ -278,11 +282,14 @@ class KlineFetch:
                 await self.handle_ticker(ticker)
         else:
             # New way Concurrently
-            ticker_pairs = [
-                to_update_tickers[n : n + self.parallel]
-                for n in range(0, len(to_update_tickers), 2)
-            ]  # Group tickers into pairs
+            ticker_pairs = self.split_list(to_update_tickers, self.parallel)
             count = 0
+            print("全部 tickers:", len(to_update_tickers))
+            # save to_update_tickers to  json  file
+            with open(f"tickers_to_update.json", "w") as f:
+                json.dump(to_update_tickers, f)
+
+            print("全部 ticker分組个数:", len(ticker_pairs))
             for pair in ticker_pairs:
                 count += 1
                 logging.warning(
@@ -299,18 +306,4 @@ class KlineFetch:
                 )  # Run for each pair concurrently
                 logging.warning(f"Done pair {pair}")
 
-                await asyncio.sleep(
-                    0.2
-                )  
-
-        # Handle Error Tickers
-        self.save_error_tickers()
-
-    def save_error_tickers(self) -> None:
-        if not self.error_tickers:
-            return
-        today = datetime.datetime.today().strftime('%Y-%m-%d')
-        file_name = f"err_tickers_{today}.log"
-        with open(file_name, 'w') as f:
-            json.dump(list(self.error_tickers), f)
-        logging.warning(f"{len(self.error_tickers)} error tickers saved.")
+                await asyncio.sleep(0.2)
