@@ -6,7 +6,7 @@ import asyncio
 import logging
 from datetime import datetime
 from time import sleep
-from typing import List, Optional
+from typing import List, Optional, Set
 import httpx
 import pandas as pd
 import asyncify
@@ -25,7 +25,8 @@ class KlineFetch:
 
     def __init__(self, parallel: int = 1) -> None:
         self.parallel = parallel
-        self.tickers = []
+        self.tickers: List[str] = []
+        self.delisted_tickers: Set[str] = set()
         self.cache = pd.DataFrame()
 
     async def initialize(self) -> None:
@@ -155,6 +156,9 @@ class KlineFetch:
         2. Get the data from yfinance API
         3. Insert the data to database
         """
+        if ticker in self.delisted_tickers:
+            logging.warning(f"{ticker} is delisted. skipped.")
+            return
         today = datetime.today().strftime("%Y%m%d")
         last_update_date = await self._check_last_update_date(ticker)
         if last_update_date and today == last_update_date.strftime("%Y%m%d"):
@@ -239,6 +243,12 @@ class KlineFetch:
         Download the data for the given tickers and store them in cache
         """
         self.cache = yf.download(tickers, period="3mo", group_by="ticker", threads=True)
+
+        # Check NaN value
+        for ticker in tickers:
+            if self.cache[ticker].isnull().values.any():
+                logging.warning(f"NaN value found for {ticker}")
+                self.delisted_tickers.add(ticker)
 
     async def handle_all_tickers(self) -> None:
         """
