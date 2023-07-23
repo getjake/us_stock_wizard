@@ -284,12 +284,8 @@ class KlineFetch:
             # New way Concurrently
             ticker_pairs = self.split_list(to_update_tickers, self.parallel)
             count = 0
-            print("全部 tickers:", len(to_update_tickers))
-            # save to_update_tickers to  json  file
-            with open(f"tickers_to_update.json", "w") as f:
-                json.dump(to_update_tickers, f)
-
-            print("全部 ticker分組个数:", len(ticker_pairs))
+            print("All tickers:", len(to_update_tickers))
+            print("All Groups:", len(ticker_pairs))
             for pair in ticker_pairs:
                 count += 1
                 logging.warning(
@@ -298,12 +294,14 @@ class KlineFetch:
                 self.download_cache(pair)
 
                 # Option 1
-                # for _ticker in pair:
-                #     await self.handle_ticker(_ticker)
-                # Option 2
-                await asyncio.gather(
-                    *(self.handle_ticker(ticker) for ticker in pair)
-                )  # Run for each pair concurrently
+                for _ticker in pair:
+                    await self.handle_ticker(_ticker)
+
+                # Option 2 - Bug may exist!
+                # await asyncio.gather(
+                #     *(self.handle_ticker(ticker) for ticker in pair)
+                # )  # Run for each pair concurrently
+
                 logging.warning(f"Done pair {pair}")
 
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.1)
