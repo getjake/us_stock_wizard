@@ -53,6 +53,7 @@ class KlineFetch:
         df_joint = pd.concat([df_null, df_to_update])
         tickers = df_joint["ticker"].tolist()
         tickers = sorted(tickers)
+        tickers = [x for x in tickers if "/" not in x]
         if not tickers:
             logging.info("No tickers found")
             return []
@@ -253,11 +254,21 @@ class KlineFetch:
         lst = [x for x in result if "/" not in x]
         return lst
 
-    def download_cache(self, tickers: List[str]) -> None:
+    def download_cache(self, tickers: List[str], retries: int = 3) -> None:
         """
         Download the data for the given tickers and store them in cache
         """
-        self.cache = yf.download(tickers, period="3mo", group_by="ticker", threads=True)
+        while retries > 0:
+            self.cache = yf.download(
+                tickers, period="1mo", group_by="ticker", threads=True
+            )
+            if not self.cache.empty:
+                break
+            retries -= 1
+            sleep(1)
+        if self.cache.empty:
+            logging.error(f"Download failed for {tickers}, retries: {retries}")
+            return
 
         # Check NaN value
         for ticker in tickers:
