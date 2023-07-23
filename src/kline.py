@@ -29,6 +29,10 @@ class KlineFetch:
         self.delisted_tickers: Set[str] = set()
         self.cache = pd.DataFrame()
 
+        # Vars
+        self.tomorrow = (datetime.today() + pd.DateOffset(days=1)).strftime("%Y-%m-%d")
+
+
     async def initialize(self) -> None:
         self.tickers = await self.get_all_tickers()
 
@@ -63,7 +67,7 @@ class KlineFetch:
             ticker: The ticker symbol
             start: The start date of the data
         """
-        tomorrow = (datetime.today() + pd.DateOffset(days=1)).strftime("%Y-%m-%d")
+        # tomorrow = (datetime.today() + pd.DateOffset(days=1)).strftime("%Y-%m-%d")
         default = (datetime.today() - pd.DateOffset(days=252 * 3)).strftime("%Y-%m-%d")
         if not start:
             start = default
@@ -72,11 +76,12 @@ class KlineFetch:
 
         if cache and not self.cache.empty and ticker in self.cache:
             data = self.cache[ticker]
-            data = data[start:tomorrow]
+            data = data[start:self.tomorrow]
+            print(f"Ticker {ticker} using cache.")
             return data
         else:
             result: pd.DataFrame = await self.download_kline(
-                ticker, start=start, end=tomorrow
+                ticker, start=start, end=self.tomorrow
             )
             return result
 
@@ -278,12 +283,16 @@ class KlineFetch:
                     f"Downloading pair {pair}: {count} / {len(ticker_pairs)}"
                 )
                 self.download_cache(pair)
-                for _ticker in pair:
-                    await self.handle_ticker(_ticker)
-                # await asyncio.gather(
-                #     *(self.handle_ticker(ticker) for ticker in pair)
-                # )  # Run for each pair concurrently
+
+                # Option 1
+                # for _ticker in pair:
+                #     await self.handle_ticker(_ticker)
+                # Option 2
+                await asyncio.gather(
+                    *(self.handle_ticker(ticker) for ticker in pair)
+                )  # Run for each pair concurrently
                 logging.warning(f"Done pair {pair}")
+
                 await asyncio.sleep(
-                    1
-                )  # Sleep for 1 second to avoid being blocked by yfinance
+                    0.2
+                )  
