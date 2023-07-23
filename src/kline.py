@@ -2,6 +2,7 @@
 Get the candlestick (kline) data  from yfinance API.
 The API Key shall be stored in the .env file.
 """
+import json
 import asyncio
 import logging
 from datetime import datetime
@@ -28,10 +29,7 @@ class KlineFetch:
         self.tickers: List[str] = []
         self.delisted_tickers: Set[str] = set()
         self.cache = pd.DataFrame()
-
-        # Vars
-        self.tomorrow = (datetime.today() + pd.DateOffset(days=1)).strftime("%Y-%m-%d")
-
+        self.error_tickers = set()
 
     async def initialize(self) -> None:
         self.tickers = await self.get_all_tickers()
@@ -67,21 +65,21 @@ class KlineFetch:
             ticker: The ticker symbol
             start: The start date of the data
         """
-        # tomorrow = (datetime.today() + pd.DateOffset(days=1)).strftime("%Y-%m-%d")
+        tomorrow = (datetime.today() + pd.DateOffset(days=1)).strftime("%Y-%m-%d")
         default = (datetime.today() - pd.DateOffset(days=252 * 3)).strftime("%Y-%m-%d")
         if not start:
             start = default
-        else:
+        if not isinstance(start, str):
             start = pd.to_datetime(start).strftime("%Y-%m-%d")
 
         if cache and not self.cache.empty and ticker in self.cache:
             data = self.cache[ticker]
-            data = data[start:self.tomorrow]
+            data = data[start:tomorrow]
             print(f"Ticker {ticker} using cache.")
             return data
         else:
             result: pd.DataFrame = await self.download_kline(
-                ticker, start=start, end=self.tomorrow
+                ticker, start=start, end=tomorrow
             )
             return result
 
@@ -169,7 +167,13 @@ class KlineFetch:
         if last_update_date and today == last_update_date.strftime("%Y%m%d"):
             logging.warning(f"Ticker {ticker} alreadly updated kline. skipped.")
             return
-        _data = await self.get_ticker(ticker, start=last_update_date, cache=True)
+        try:
+            _data = await self.get_ticker(ticker, start=last_update_date, cache=True)
+        except Exception as e:
+            logging.error(f"Ticker {ticker} Download Error.")
+            self.error_tickers.add(ticker)
+            return
+
         if _data.empty:
             logging.error(f"No data found for {ticker}")
             return
@@ -241,7 +245,9 @@ class KlineFetch:
         )
         if res.empty:
             return []
-        return res["ticker"].tolist()
+        result = res["ticker"].tolist()
+        lst = [x for x in result if '/' not in x]
+        return lst
 
     def download_cache(self, tickers: List[str]) -> None:
         """
@@ -296,3 +302,15 @@ class KlineFetch:
                 await asyncio.sleep(
                     0.2
                 )  
+
+        # Handle Error Tickers
+        self.save_error_tickers()
+
+    def save_error_tickers(self) -> None:
+        if not self.error_tickers:
+            return
+        today = datetime.datetime.today().strftime('%Y-%m-%d')
+        file_name = f"err_tickers_{today}.log"
+        with open(file_name, 'w') as f:
+            json.dump(list(self.error_tickers), f)
+        logging.warning(f"{len(self.error_tickers)} error tickers saved.")
