@@ -304,14 +304,14 @@ class KlineFetch:
                 )
                 self.download_cache(pair)
 
-                # Option 1
-                for _ticker in pair:
-                    await self.handle_ticker(_ticker)
+                # # Option 1
+                # for _ticker in pair:
+                #     await self.handle_ticker(_ticker)
 
                 # Option 2 - Bug may exist!
-                # await asyncio.gather(
-                #     *(self.handle_ticker(ticker) for ticker in pair)
-                # )  # Run for each pair concurrently
+                await asyncio.gather(
+                    *(self.handle_ticker(ticker) for ticker in pair)
+                )  # Run for each pair concurrently
 
                 logging.warning(f"Done pair {pair}")
 
