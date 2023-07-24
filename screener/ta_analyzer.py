@@ -49,6 +49,7 @@ class TaAnalyzer:
         self.rs = rs or 0  # on the day's rs
         self.db_utils = StockDbUtils()
         self.kline: Optional[pd.DataFrame] = None
+        # Default to all criteria
         self.cret: List[TaMeasurements] = cret or TaMeasurements.list()
 
     async def get_kline(self) -> None:
@@ -104,7 +105,10 @@ class TaAnalyzer:
         Mark's Trend Template for Stage 2
         Docs: https://docs.google.com/document/d/1sS7uMXzG1j626b1BYXUhr8lY2B-YlQkF9e7skFPlmig/edit#bookmark=id.7uewkhhvqexh
 
-        Mod: 满足 8 of 8 个条件就可以
+        Must statisfy all conditions, it is a AND relationship.
+        - We would like the stock to be in a Stage 2 uptrend.
+        - Also, don't want the stock to be too extended from the 50-day moving average.
+
         1. Stock price is above MA150 and MA200
         2. MA150 is above MA200
         3. MA200 is trending up for at least 1 month
@@ -115,6 +119,8 @@ class TaAnalyzer:
         8. Current price is above MA50.
         9. Stock Price > 10
         10. Daily Volume USD > 1 million
+        11. Current close no more than 30% of the MA50
+        12. Max Drawdown no more than 35% in the recent 90 trading days.
         """
         # ma50, 150, 200
         kline = _kline.copy()
@@ -141,8 +147,24 @@ class TaAnalyzer:
         c_9 = latest["adjClose"] >= 10
         c_10 = latest["adjClose"] * latest["volume"] >= 1000000
 
+        # c_11 - No more than 30% of the MA50
+        c_11 = latest["adjClose"] <= latest["ma50"] * 1.3
+
+        # Max Drawdown
+        c_12 = True
+        stock = _kline.copy()
+        stock.set_index("date", inplace=True)
+        stock = stock.iloc[-90:]  # Last 90 days
+        stock["cummax"] = stock["adjClose"].cummax()
+        stock["drawdown"] = stock["close"] / stock["cummax"] - 1
+        max_drawdown = stock["drawdown"].min()
+        if max_drawdown < -0.35:  # 35% Max drawdown
+            c_12 = False
+
         # Result
-        result = sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10]) >= 10
+        result = (
+            sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12]) >= 12
+        )
         return result
 
     def _cret_minervini(self, _kline: pd.DataFrame, months: int) -> bool:
