@@ -79,8 +79,6 @@ model DailyKline {
   close     Float
   adjClose  Float
   volume    BigInt
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@unique([ticker, date])
   @@index([ticker, date])
