@@ -169,7 +169,7 @@ class StockDividends:
                 where={"id": id},
                 data={"recentSplitDivend": recentSplitDivend},
             )
-        logging.info(f"Done inserted {self.diff_df.shape[0]} rows into database")}")
+        logging.info(f"Done inserted {self.diff_df.shape[0]} rows into database")
 
     @staticmethod
     def check_dividend_and_split(ticker: str, days_ago: int = 2) -> bool:
