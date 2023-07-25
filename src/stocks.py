@@ -106,6 +106,95 @@ class StockTickers:
         await self._handle_tickers(market=StockMarket.NYSE)
 
 
+class StockDividends:
+    """
+    Handle Stock Split / Dividend on recent 2 trading days.
+    Should be run before market opens to accelerate the candlestick chart downloading process.
+
+    Example:
+        from us_stock_wizard.stocks import StockDividends
+        sd = StockDividends()
+        await sd.initialize()
+        sd.handle_all()
+        await sd.save_to_db()
+
+    """
+
+    def __init__(self) -> None:
+        self.tickers_df: pd.DataFrame = pd.DataFrame()
+
+    async def initialize(self) -> None:
+        await self.get_tickers()
+
+    async def get_tickers(self) -> None:
+        """
+        Get tickers from database
+        """
+        self.tickers_df = await StockDbUtils.read(
+            table=DbTable.TICKERS, where={"delisted": False}, output="df"
+        )
+        self.diff_df = pd.DataFrame()
+
+    def handle_all(self) -> None:
+        """
+        Handle all tickers, and save the result to dataframe
+        """
+        # iterate through all tickers
+        if self.tickers_df.empty:
+            raise Exception("Tickers not loaded")
+        modified_tickers_df = self.tickers_df.copy()
+        for _, row in modified_tickers_df.iterrows():
+            ticker = row["ticker"]
+            is_dividend = self.check_dividend_and_split(ticker=ticker)
+            modified_tickers_df.at[_, "recentSplitDivend"] = is_dividend
+        # Check diff between two dataframes
+        self.diff_df = modified_tickers_df[
+            modified_tickers_df["recentSplitDivend"]
+            != self.tickers_df["recentSplitDivend"]
+        ]
+
+    async def save_to_db(self) -> None:
+        """
+        Save the result to database
+        """
+        if self.diff_df.empty:
+            logging.warning("No diff found, nothing to save")
+            return None
+        for _, row in self.diff_df.iterrows():
+            id = row["id"]
+            recentSplitDivend = row["recentSplitDivend"]
+            # save to db
+            await StockDbUtils.update(
+                table=DbTable.TICKERS,
+                where={"id": id},
+                data={"recentSplitDivend": recentSplitDivend},
+            )
+        logging.info(f"Done inserted {self.diff_df.shape[0]} rows into database")}")
+
+    @staticmethod
+    def check_dividend_and_split(ticker: str, days_ago: int = 2) -> bool:
+        """
+        Checks if a stock has had a dividend or split in the last n trading days
+        """
+        if days_ago > 5:
+            raise ValueError("Days ago must be less than 5")
+        try:
+            # Get the data of the stock
+            stock = yf.Ticker(ticker)
+
+            # Get stock info
+            hist = stock.history(period="5d").tail(days_ago)
+
+            has_dividend = hist["Dividends"].sum() != 0
+            has_split = hist["Stock Splits"].sum() != 0
+
+            # Check flags and return result
+            return has_dividend or has_split
+        except Exception as e:
+            logging.error(e)
+            return False
+
+
 class TradingCalendar:
     """
     Get the trading calendar for the next 90 days
