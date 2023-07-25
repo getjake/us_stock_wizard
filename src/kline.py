@@ -27,12 +27,14 @@ class KlineFetch:
     def __init__(self, parallel: int = 1) -> None:
         self.parallel = parallel
         self.tickers: List[str] = []
+        self.simple_tickers: Set[str] = ()  # No dividend or split
         self.delisted_tickers: Set[str] = set()
         self.cache = pd.DataFrame()
         self.error_tickers = set()
 
     async def initialize(self) -> None:
         self.tickers = await self.get_all_tickers()
+        self.simple_tickers = await self.get_simple_tickers()
 
     @staticmethod
     def split_list(my_list: List[str], count: int) -> List[List[str]]:
@@ -78,7 +80,7 @@ class KlineFetch:
             start = pd.to_datetime(start).strftime("%Y-%m-%d")
 
         if cache and not self.cache.empty and ticker in self.cache:
-            data = self.cache[ticker]
+            data: pd.DataFrame = self.cache[ticker]
             data = data[start:tomorrow]
             print(f"Ticker {ticker} using cache.")
             return data
@@ -151,10 +153,41 @@ class KlineFetch:
                 "Date": "date",
             }
         )
+        _data["volume"] = _data["volume"].astype(int)
         _data["ticker"] = "SPX"  # Change to SPX
         _data["date"] = pd.to_datetime(_data["date"])
         data_list = _data.to_dict("records")
         await StockDbUtils.insert(DbTable.DAILY_KLINE, data_list)
+
+    async def handle_simple_ticker(self, ticker: str) -> bool:
+        """
+        Handle Simpel ticker that has no dividend or split, recently.
+        """
+        try:
+            today = datetime.today().strftime("%Y-%m-%d")
+            _data = await self.get_ticker(ticker, start=today, cache=True)
+            if _data.empty or _data.shape[0] > 1:
+                return False
+            _ = {
+                "ticker": ticker,
+                "date": _data.index[0],
+                "open": _data.iloc[0]["Open"],
+                "high": _data.iloc[0]["High"],
+                "low": _data.iloc[0]["Low"],
+                "close": _data.iloc[0]["Close"],
+                "adjClose": _data.iloc[0]["Adj Close"],
+                "volume": int(_data.iloc[0]["Volume"]),
+            }
+            await StockDbUtils.insert(DbTable.DAILY_KLINE, [_])
+            await StockDbUtils.update(
+                DbTable.TICKERS,
+                {"ticker": ticker},
+                {"klineUpdatedAt": datetime.today()},
+            )
+            return True
+        except Exception as e:
+            logging.error(f"Error for {ticker}: {e}")
+            return False
 
     async def handle_ticker(self, ticker: str) -> None:
         """
@@ -168,6 +201,12 @@ class KlineFetch:
             logging.warning(f"{ticker} is delisted. skipped.")
             return
         today = datetime.today().strftime("%Y%m%d")
+        # Handle Simple Tickers
+        if ticker in self.simple_tickers:
+            # Only update today's data
+            succ = await self.handle_simple_ticker(ticker)
+            if succ:
+                return
         last_update_date = await self._check_last_update_date(ticker)
         if last_update_date and today == last_update_date.strftime("%Y%m%d"):
             logging.warning(f"Ticker {ticker} alreadly updated kline. skipped.")
@@ -201,6 +240,7 @@ class KlineFetch:
                 "Date": "date",
             }
         )
+        _data["volume"] = _data["volume"].astype(int)
         _data["ticker"] = ticker
         _data["date"] = pd.to_datetime(_data["date"])
 
@@ -275,6 +315,18 @@ class KlineFetch:
             if self.cache[ticker].isnull().values.any():
                 logging.warning(f"NaN value found for {ticker}")
                 self.delisted_tickers.add(ticker)
+
+    async def get_simple_tickers(self) -> List[str]:
+        """
+        Get tickers that has no split or dividend in the last two trading days.
+        """
+        res: pd.DataFrame = await StockDbUtils.read(
+            DbTable.TICKERS, where={"recentSplitDivend": False}, output="df"
+        )
+        _ = res.ticker.tolist()
+        # Remove tickers that has / in it
+        _ = [x for x in _ if "/" not in x]
+        return set(_)
 
     async def handle_all_tickers(self) -> None:
         """
