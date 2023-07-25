@@ -26,6 +26,7 @@ model Tickers {
   delisted              Boolean   @default(false)
   fundamentalsUpdatedAt DateTime? @db.Date
   klineUpdatedAt        DateTime? @db.Date
+  recentSplitDivend     Boolean?  @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -70,17 +71,15 @@ model TradingCalendar {
 }
 
 model DailyKline {
-  id        String   @id @default(uuid())
-  ticker    String
-  date      DateTime @db.Date
-  open      Float
-  high      Float
-  low       Float
-  close     Float
-  adjClose  Float
-  volume    BigInt
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id       String   @id @default(uuid())
+  ticker   String
+  date     DateTime @db.Date
+  open     Float
+  high     Float
+  low      Float
+  close    Float
+  adjClose Float
+  volume   BigInt
 
   @@unique([ticker, date])
   @@index([ticker, date])
