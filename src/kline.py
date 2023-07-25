@@ -20,11 +20,9 @@ from us_stock_wizard.src.common import StockCommon
 class KlineFetch:
     """
     Check stock split and dividend
-
-    parallel 2 => bug, do not use it!
     """
 
-    def __init__(self, parallel: int = 1) -> None:
+    def __init__(self, parallel: int = 5) -> None:
         self.parallel = parallel
         self.tickers: List[str] = []
         self.simple_tickers: Set[str] = ()  # No dividend or split
