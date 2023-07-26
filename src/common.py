@@ -34,8 +34,8 @@ class DingTalkBot:
 
     def __init__(self):
         env = StockRootDirectory.env()
-        self.apikey = env["DINGTALK_KEY"]
-        self.secret = env["DINGTALK_SECRET"]
+        self.apikey = env.get("DINGTALK_KEY")
+        self.secret = env.get("DINGTALK_SECRET")
 
     def get_sign(self) -> Tuple[str, str]:
         # Get the sign based on secret
@@ -50,6 +50,9 @@ class DingTalkBot:
         return timestamp, sign
 
     async def send_msg(self, msg: str) -> bool:
+        if not self.apikey or not self.secret:
+            logging.warning("No DingTalk API Key or Secret found")
+            return False
         timestamp, sign = self.get_sign()
         url = f"https://oapi.dingtalk.com/robot/send?access_token={self.apikey}&timestamp={timestamp}&sign={sign}"
         headers = {"Content-Type": "application/json"}
