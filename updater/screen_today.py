@@ -17,9 +17,9 @@ async def check_trading_day() -> bool:
 
 
 async def main():
-    # is_today_trading = await check_trading_day()
-    # if not is_today_trading:
-    #     return
+    is_today_trading = await check_trading_day()
+    if not is_today_trading:
+        return
     screener = DailyScreener()
     await screener.initialize()
     await screener.screen_all()

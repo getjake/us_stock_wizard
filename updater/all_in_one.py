@@ -89,7 +89,7 @@ async def run_post_analysis():
 
 
 async def main():
-    await bot.send_msg("Us stock is updating right now...")
+    await bot.send_msg("US-Stock-Wizard is updating right now...")
     try:
         is_trading_day = await check_trading_day()
         if not is_trading_day:
@@ -100,9 +100,9 @@ async def main():
         await get_rs()
         await screen()
         await run_post_analysis()
-        await bot.send_msg("US Stocks Done All")
+        await bot.send_msg("US-Stock-Wizards Done All")
     except Exception as e:
-        err = f"US Stocks All Error: {e}"
+        err = f"US-Stock-Wizard all-in-one Error: {e}"
         await bot.send_msg(err)
 
 

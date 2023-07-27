@@ -7,3 +7,4 @@ pandas-market-calendars
 asyncify
 google-api-python-client
 XlsxWriter
+fastapi
