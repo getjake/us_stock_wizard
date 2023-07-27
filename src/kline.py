@@ -177,11 +177,6 @@ class KlineFetch:
                 "volume": int(_data.iloc[0]["Volume"]),
             }
             await StockDbUtils.insert(DbTable.DAILY_KLINE, [_])
-            await StockDbUtils.update(
-                DbTable.TICKERS,
-                {"ticker": ticker},
-                {"klineUpdatedAt": datetime.today()},
-            )
             return True
         except Exception as e:
             logging.error(f"Error for {ticker}: {e}")
@@ -254,11 +249,6 @@ class KlineFetch:
 
         data_list = _data.to_dict("records")
         await StockDbUtils.insert(DbTable.DAILY_KLINE, data_list)
-
-        # Update the ticker table
-        await StockDbUtils.update(
-            DbTable.TICKERS, {"ticker": ticker}, {"klineUpdatedAt": datetime.today()}
-        )
 
         return
 
