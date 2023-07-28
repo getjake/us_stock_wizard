@@ -8,10 +8,16 @@ import urllib
 import os
 import logging
 import json
-from typing import Tuple, List, Dict
+from typing import List, Dict
 import pyperclip
 from us_stock_wizard import StockRootDirectory
+from us_stock_wizard.src.common import NetworkRequests
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
+
+
+class DataSource:
+    API = "api"
+    DB = "db"
 
 
 class TradingViewIntegration:
@@ -23,11 +29,13 @@ class TradingViewIntegration:
     >>> await tv.handle_all()
     """
 
-    def __init__(self) -> None:
+    def __init__(self, source: DataSource = DataSource.DB, host: str = "") -> None:
+        self.source = source
         self.root = StockRootDirectory().root_dir()
         self.curr_dir = os.path.dirname(os.path.abspath(__file__))
         self.config: Dict[str, int] = {}
         self.js_template = ""
+        self.host = host
         self.load()
 
     def load(self) -> None:
@@ -45,10 +53,11 @@ class TradingViewIntegration:
         with open(_, "r") as f:
             self.js_template = f.read()
 
-    async def get_data(self, kind: str) -> List[str]:
-        """
-        Get data from database
-        """
+        # Load API
+        if not self.host:
+            self.host = StockRootDirectory().env().get("API_HOST")
+
+    async def _get_data_from_db(self, kind: str) -> List[str]:
         data = await StockDbUtils.read(table=DbTable.REPORT, output="df")
         tickers = await StockDbUtils.read(table=DbTable.TICKERS, output="df")
         data = data[data["kind"] == kind]
@@ -58,6 +67,28 @@ class TradingViewIntegration:
         tickers["market_ticker"] = tickers["market"] + ":" + tickers["ticker"]
         ticker_exported = tickers["market_ticker"].tolist()
         return ticker_exported
+
+    async def _get_data_from_api(self, kind: str) -> List[str]:
+        """
+        Get data from API
+        """
+        if not self.host:
+            raise ValueError("API_HOST env not set")
+
+        url = urllib.parse.urljoin(self.host, f"/api/reports/{kind}")
+        print("url is", url)
+        data = NetworkRequests._httpx_get_data(url=url)
+        return data
+
+    async def get_data(self, kind: str) -> List[str]:
+        """
+        Get data from database
+        """
+        if self.source == DataSource.DB:
+            return await self._get_data_from_db(kind)
+        elif self.source == DataSource.API:
+            return await self._get_data_from_api(kind)
+        raise ValueError(f"Unknown source {self.source}")
 
     async def handle_category(self, kind: str, id: int) -> str:
         tickers: List[str] = await self.get_data(kind)
@@ -89,4 +120,4 @@ class TradingViewIntegration:
 if __name__ == "__main__":
     import asyncio
 
-    asyncio.run(TradingViewIntegration().handle_all())
+    asyncio.run(TradingViewIntegration(source=DataSource.API).handle_all())
