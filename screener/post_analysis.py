@@ -9,6 +9,7 @@ from typing import Optional, List, Dict
 import datetime
 import pandas as pd
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
+from us_stock_wizard.screener.fundamental_analyzer import FundamentalScreener
 from us_stock_wizard.src.common import create_xlsx_file
 from us_stock_wizard.src.gdrive_utils import GoogleDriveUtils
 
@@ -28,6 +29,9 @@ class PostAnalysis:
         self.date_str = self.date.strftime("%Y-%m-%d")
         self.date_ts = pd.Timestamp(self.date)
         self.to_save: Dict[str, pd.DataFrame] = defaultdict(lambda: pd.DataFrame())
+        self.fs = FundamentalScreener()
+        self.preferred_stocks = []
+        self.blacklist_stocks = []
 
     async def analyze_all(self) -> Dict[str, pd.DataFrame]:
         """
@@ -35,6 +39,11 @@ class PostAnalysis:
 
         Customize it!
         """
+        # Sector Filter
+        await self.fs.initialize()
+        self.preferred_stocks = self.fs.filter_preferred()
+        self.blacklist_stocks = self.fs.filter_blacklist()
+
         await self.analyze_stage2()
         await self.analyze_stage2_diff()
         await self.analyze_ipo()
@@ -45,7 +54,7 @@ class PostAnalysis:
             create_xlsx_file(self.to_save, file_path)
             self.gdrive.upload(file_path, f"PostAnalysis_{self.date_str}.xlsx")
 
-    async def analyze_stage2(self) -> pd.DataFrame:
+    async def analyze_stage2(self) -> None:
         """
         - Stage 2 Analysis
         - Low volatility in recent 7 days.
@@ -105,26 +114,50 @@ class PostAnalysis:
             ["ticker", "sales", "netIncome", "grossMarginRatio"]
         ]
 
-        # join latest_quarterly_data  and stage2_overview on ticker
         stage2_overview = stage2_overview.merge(
             latest_quarterly_data, on="ticker", how="left"
         )
 
-        # filter netIncome > 0 <== Ignored!
-        stage2_ni_lt_0 = stage2_overview  # [stage2_overview["netIncome"] > 0]
+        # Filter by preferred_stocks
+        stage2_overview_preferred = stage2_overview[
+            stage2_overview["ticker"].isin(self.preferred_stocks)
+        ]
+
+        # Filter by blacklist_stocks (Remove them from tickers)
+        stage2_overview_non_blacklist = stage2_overview[
+            ~stage2_overview["ticker"].isin(self.blacklist_stocks)
+        ]
 
         # Also save result to database
-        tickers = stage2_ni_lt_0["ticker"].values.tolist()
+        tickers = stage2_overview["ticker"].values.tolist()
+        tickers_preferred = stage2_overview_preferred["ticker"].values.tolist()
+        tickers_non_blacklist = stage2_overview_non_blacklist["ticker"].values.tolist()
+
         _ = {
             "date": pd.to_datetime(self.date),
             "kind": "PostAnalysis_stage2",
             "data": Json(tickers),
         }
+
+        _ = {
+            "date": pd.to_datetime(self.date),
+            "kind": "PostAnalysis_stage2_preferred",
+            "data": Json(tickers_preferred),
+        }
+
+        _ = {
+            "date": pd.to_datetime(self.date),
+            "kind": "PostAnalysis_stage2_non_blacklist",
+            "data": Json(tickers_non_blacklist),
+        }
+
         await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
 
         # Save to self.to_save
-        self.to_save["stage2"] = stage2_ni_lt_0
-        return stage2_ni_lt_0
+        self.to_save["stage2"] = stage2_overview
+        self.to_save["stage2_preferred"] = stage2_overview_preferred
+        self.to_save["stage2_non_blacklist"] = stage2_overview_non_blacklist
+        return
 
     async def analyze_stage2_diff(self) -> None:
         """
