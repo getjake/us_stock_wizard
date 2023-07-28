@@ -138,12 +138,14 @@ class PostAnalysis:
             "kind": "PostAnalysis_stage2",
             "data": Json(tickers),
         }
+        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
 
         _ = {
             "date": pd.to_datetime(self.date),
             "kind": "PostAnalysis_stage2_preferred",
             "data": Json(tickers_preferred),
         }
+        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
 
         _ = {
             "date": pd.to_datetime(self.date),

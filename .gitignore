@@ -1,5 +1,6 @@
 googleauth.json
 config.json
+tv-config.json
 # Airflow configuration
 airflow.cfg
 unittests.cfg
