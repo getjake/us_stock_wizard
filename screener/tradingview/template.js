@@ -1,5 +1,5 @@
-const tickers = JSON.parse('$TICKERS$');
-const watchlist_id = '$WATCHLIST_ID$';
+var tickers = JSON.parse('$TICKERS$');
+var watchlist_id = '$WATCHLIST_ID$';
 
 fetch(
   `https://www.tradingview.com/api/v1/symbols_list/custom/${watchlist_id}/append/`,
@@ -27,3 +27,14 @@ fetch(
     credentials: 'include',
   },
 );
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function demo() {
+  await sleep(2000);
+  console.log('Waiting for TradingView ...');
+}
+
+demo();
