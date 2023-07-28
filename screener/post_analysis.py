@@ -37,6 +37,7 @@ class PostAnalysis:
         """
         await self.analyze_stage2()
         await self.analyze_stage2_diff()
+        await self.analyze_ipo()
 
         # Create excel file to tempdir
         with tempfile.TemporaryDirectory() as tempdir:
@@ -109,8 +110,8 @@ class PostAnalysis:
             latest_quarterly_data, on="ticker", how="left"
         )
 
-        # filter netIncome > 0
-        stage2_ni_lt_0 = stage2_overview[stage2_overview["netIncome"] > 0]
+        # filter netIncome > 0 <== Ignored!
+        stage2_ni_lt_0 = stage2_overview  # [stage2_overview["netIncome"] > 0]
 
         # Also save result to database
         tickers = stage2_ni_lt_0["ticker"].values.tolist()
@@ -125,7 +126,7 @@ class PostAnalysis:
         self.to_save["stage2"] = stage2_ni_lt_0
         return stage2_ni_lt_0
 
-    async def analyze_stage2_diff(self) -> pd.DataFrame:
+    async def analyze_stage2_diff(self) -> None:
         """
         把stage2的数据和上一次的数据对比, 看看哪些股票是新的
         """
@@ -163,8 +164,26 @@ class PostAnalysis:
         _df = _df[_df["ticker"].isin(diff)]
         # Save to self.to_save
         self.to_save["stage2_diff"] = _df
+        return
 
-        return pd.DataFrame(_df)
+    async def analyze_ipo(self) -> None:
+        """
+        Analyze IPO stocks
+        """
+        tickers = await StockDbUtils.read(DbTable.TICKERS, output="df")
+        tickers = tickers[["ticker", "sector", "industry"]]
+
+        ipos: pd.DataFrame = await StockDbUtils.read(
+            table=DbTable.REPORT,
+            where={"kind": "ipo"},
+            output="df",
+        )
+        ipos = ipos.sort_values(by="date", ascending=True)
+        ipo_stocks = ipos.iloc[-1]["data"]
+        result = tickers[tickers["ticker"].isin(ipo_stocks)]
+        # Save to self.to_save
+        self.to_save["ipo"] = result
+        return
 
 
 async def main():

@@ -23,6 +23,7 @@ from us_stock_wizard.src.kline import KlineFetch
 from us_stock_wizard.screener.rs_calculator import RelativeStrengthCalculator
 from us_stock_wizard.screener.daily_screener import DailyScreener
 from us_stock_wizard.screener.post_analysis import PostAnalysis
+from us_stock_wizard.screener.ipo_screener import IpoScreener
 from us_stock_wizard.src.common import DingTalkBot
 
 bot = DingTalkBot()
@@ -83,6 +84,14 @@ async def screen():
     logging.info("Done Screening")
 
 
+async def screen_ipo():
+    screener = IpoScreener()
+    await screener.initialize()
+    await screener.screen_all()
+    await screener.save()
+    logging.info("Done IPO Screening")
+
+
 async def run_post_analysis():
     pa = PostAnalysis()
     await pa.analyze_all()
@@ -99,6 +108,7 @@ async def main():
         await get_kline()
         await get_rs()
         await screen()
+        await screen_ipo()
         await run_post_analysis()
         await bot.send_msg("US-Stock-Wizards Done All")
     except Exception as e:

@@ -1,13 +1,13 @@
 """
 Screen the IPOs that meet the criteria
 """
+import asyncio
 from typing import List
 import logging
 import datetime
 from prisma import Json
 import pandas as pd
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
-from us_stock_wizard.src.common import StockCommon
 
 
 class IpoScreener:
@@ -86,15 +86,12 @@ class IpoScreener:
         """
         succ_tickers = []
         for ticker in self.stocks_df["ticker"]:
-            print(f"Screening {ticker}")
             _ = await self.screen(ticker=ticker)
             if _:
                 succ_tickers.append(ticker)
-                logging.info(f"{ticker} passed")
-                print(f"{ticker} passed")
+                logging.warning(f"{ticker} passed")
             else:
-                logging.info(f"{ticker} failed")
-                print(f"{ticker} failed")
+                logging.warning(f"{ticker} does not pass")
         self.succ_tickers = succ_tickers
         return succ_tickers
 
@@ -113,3 +110,14 @@ class IpoScreener:
         }
         await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
         logging.warning("Saved the succ. tickers to database")
+
+
+async def main():
+    screener = IpoScreener()
+    await screener.initialize()
+    await screener.screen_all()
+    await screener.save()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

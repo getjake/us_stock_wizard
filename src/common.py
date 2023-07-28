@@ -82,7 +82,6 @@ def create_xlsx_file(multi_data: Dict[str, pd.DataFrame], file_path: str):
 
     for table, data in multi_data.items():
         data.to_excel(writer, sheet_name=table)
-        # workbook = writer.book
         worksheet = writer.sheets[table]
         worksheet.freeze_panes(1, 0)  # Freeze the first row
 
