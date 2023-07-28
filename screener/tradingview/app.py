@@ -6,17 +6,22 @@ Auto Add All Tickers to TradingView Watchlist
 3. Go to TradingView.com, open Chrome console, paste the script and run
 4. Refresh the page, you should see all tickers in your watchlist
 """
+import urllib
+import os
 import logging
 import json
+from typing import Tuple
 import pyperclip
+from us_stock_wizard import StockRootDirectory
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 
 WATCHLIST_ID = "118272101"  # Change this to your watchlist ID
 
 
-async def main():
-    # read base.txt into a string
-    with open("base.txt", "r") as myfile:
+async def main(source=""):
+    curr_path = os.path.dirname(os.path.realpath(__file__))
+    _file = os.path.join(curr_path, "template.js")
+    with open(_file, "r") as myfile:
         js_template = myfile.read()
     if not js_template:
         logging.warning("No template found, quitting...")

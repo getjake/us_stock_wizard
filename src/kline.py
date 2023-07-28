@@ -343,16 +343,7 @@ class KlineFetch:
                     f"Downloading pair {pair}: {count} / {len(ticker_pairs)}"
                 )
                 self.download_cache(pair)
-
-                # # Option 1
-                # for _ticker in pair:
-                #     await self.handle_ticker(_ticker)
-
-                # Option 2 - Bug may exist!
-                await asyncio.gather(
-                    *(self.handle_ticker(ticker) for ticker in pair)
-                )  # Run for each pair concurrently
-
-                logging.warning(f"Done pair {pair}")
+                await asyncio.gather(*(self.handle_ticker(ticker) for ticker in pair))
+                logging.warning(f"Done for {pair}")
 
                 await asyncio.sleep(0.1)

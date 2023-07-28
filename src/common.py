@@ -236,3 +236,53 @@ class StockCommon:
         """
         _data = [d.dict() for d in data]
         return pd.DataFrame(_data)
+
+
+class NetworkRequests:
+    @staticmethod
+    def _httpx_get_data(
+        url: str, params: dict = {}, retries: int = 3, timeout: int = 10
+    ) -> List[dict]:
+        """
+        Get data list based on the given params.
+        """
+        transport = httpx.HTTPTransport(retries=retries)
+        client = httpx.Client(transport=transport, timeout=timeout)
+        response = client.get(url, params=params)
+        result = response.json()
+        return result
+
+    @staticmethod
+    def _httpx_post_data(
+        url: str,
+        data: Optional[dict | list] = None,
+        retries: int = 3,
+        timeout: int = 10,
+    ) -> dict:
+        """
+        Post data list based on the given params.
+
+        Currently for TaskLogging or SeqTaskLogging
+        """
+        transport = httpx.HTTPTransport(retries=retries)
+        client = httpx.Client(transport=transport, timeout=timeout)
+
+        response = client.post(url, json=data)
+        result = response.json()
+        return result
+
+    @staticmethod
+    def _httpx_patch_data(
+        url: str,
+        data: Optional[dict | list] = None,
+        retries: int = 3,
+        timeout: int = 10,
+    ) -> dict:
+        """
+        Patch data list based on the given params.
+        """
+        transport = httpx.HTTPTransport(retries=retries)
+        client = httpx.Client(transport=transport, timeout=timeout)
+        response = client.patch(url, json=data)
+        result: dict = response.json()
+        return result
