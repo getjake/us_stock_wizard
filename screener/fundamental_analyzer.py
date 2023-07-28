@@ -1,5 +1,6 @@
 from typing import Optional, List
 import logging
+import datetime
 import pandas as pd
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 
@@ -93,3 +94,74 @@ class FundamentalAnalyzer:
 
         _ = sales_yoy and netIncome_yoy
         return _
+
+
+class FundamentalScreener:
+    """
+    Screen a list of stocks based on fundamental analysis
+
+    Example:
+        >>> screener = FundamentalScreener()
+        >>> await screener.initialize()
+    """
+
+    def __init__(self) -> None:
+        self.stocks_df = pd.DataFrame()
+
+        self.preferred_keywords = [
+            "tech",
+            "bio",
+            "health",
+            "pharm",
+            "software",
+            "medic",
+            "consumer",
+        ]
+        self.blacklist_keywords = [
+            "bank",
+            "insurance",
+            "estate",
+            "oil",
+            "energy",
+            "gas",
+            "power",
+        ]
+
+    async def initialize(self):
+        await self.get_stocks()
+
+    async def get_stocks(self) -> None:
+        """
+        Get stocks!
+        """
+        all_stocks = await StockDbUtils.read(table=DbTable.TICKERS, output="df")
+        all_stocks = all_stocks[all_stocks["ticker"].str.len() < 5]
+        self.stocks_df = all_stocks
+
+    def filter_preferred(self) -> List[str]:
+        """
+        Return the preferred stocks
+        """
+        if self.stocks_df.empty:
+            raise ValueError("No stocks in the dataframe!")
+        df = self.stocks_df.copy()
+        df["joint_kw"] = df["sector"] + " " + df["industry"]
+        df["joint_kw"] = df["joint_kw"].str.lower()
+        pattern = "|".join(self.preferred_keywords)
+        df["contains_preferred"] = df["joint_kw"].str.contains(pattern)
+        df = df[df["contains_preferred"] == True]
+        return df["ticker"].tolist()
+
+    def filter_blacklist(self) -> List[str]:
+        """
+        Return the blacklist stocks
+        """
+        if self.stocks_df.empty:
+            raise ValueError("No stocks in the dataframe!")
+        df = self.stocks_df.copy()
+        df["joint_kw"] = df["sector"] + " " + df["industry"]
+        df["joint_kw"] = df["joint_kw"].str.lower()
+        pattern = "|".join(self.blacklist_keywords)
+        df["contains_blacklist"] = df["joint_kw"].str.contains(pattern)
+        df = df[df["contains_blacklist"] == True]
+        return df["ticker"].tolist()
