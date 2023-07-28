@@ -229,6 +229,10 @@ class StockCommon:
         raise Exception(f"Invalid format: {format}")
 
     @staticmethod
+    def split_list(my_list: List[str], count: int) -> List[List[str]]:
+        return [my_list[i : i + count] for i in range(0, len(my_list), count)]
+
+    @staticmethod
     def convert_to_dataframe(data: list) -> pd.DataFrame:
         """
         Convert the given data from database to dataframe

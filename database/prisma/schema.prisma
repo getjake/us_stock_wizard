@@ -96,6 +96,15 @@ model RelativeStrength {
   @@index([ticker, date])
 }
 
+model Naa200r {
+  id    String   @id @default(uuid())
+  date  DateTime @db.Date
+  value Float
+
+  @@unique([date])
+  @@index([date])
+}
+
 model Report {
   id        String   @id @default(uuid())
   date      DateTime @db.Date

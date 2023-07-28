@@ -34,10 +34,6 @@ class KlineFetch:
         self.tickers = await self.get_all_tickers()
         self.simple_tickers = await self.get_simple_tickers()
 
-    @staticmethod
-    def split_list(my_list: List[str], count: int) -> List[List[str]]:
-        return [my_list[i : i + count] for i in range(0, len(my_list), count)]
-
     async def get_all_tickers(self) -> List[str]:
         """
         Only get the tickers that need to be updated
@@ -333,7 +329,7 @@ class KlineFetch:
                 await self.handle_ticker(ticker)
         else:
             # New way Concurrently
-            ticker_pairs = self.split_list(to_update_tickers, self.parallel)
+            ticker_pairs = StockCommon.split_list(to_update_tickers, self.parallel)
             count = 0
             print("All tickers:", len(to_update_tickers))
             print("All Groups:", len(ticker_pairs))

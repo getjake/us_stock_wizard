@@ -16,6 +16,7 @@ class DbTable(str):
     REPORT = "Report"
     LOGGINGS = "Loggings"
     RELATIVE_STRENGTH = "RelativeStrength"
+    NAA200R = "Naa200r"
 
 
 class StockDbUtils:
