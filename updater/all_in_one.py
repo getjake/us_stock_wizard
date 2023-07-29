@@ -24,6 +24,7 @@ from us_stock_wizard.screener.rs_calculator import RelativeStrengthCalculator
 from us_stock_wizard.screener.daily_screener import DailyScreener
 from us_stock_wizard.screener.post_analysis import PostAnalysis
 from us_stock_wizard.screener.ipo_screener import IpoScreener
+from us_stock_wizard.src.macro import Naa200R
 from us_stock_wizard.src.common import DingTalkBot
 
 bot = DingTalkBot()
@@ -92,6 +93,13 @@ async def screen_ipo():
     logging.info("Done IPO Screening")
 
 
+async def get_na_a200r():
+    naa200r = Naa200R()
+    await naa200r.initialize()
+    await naa200r.analyze_all()
+    await naa200r.save()
+
+
 async def run_post_analysis():
     pa = PostAnalysis()
     await pa.analyze_all()
@@ -111,6 +119,9 @@ async def main():
         await screen_ipo()
         await run_post_analysis()
         await bot.send_msg("US-Stock-Wizards Done All")
+        await get_na_a200r()
+        await bot.send_msg("NAA200R Done All")
+
     except Exception as e:
         err = f"US-Stock-Wizard all-in-one Error: {e}"
         await bot.send_msg(err)

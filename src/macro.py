@@ -23,7 +23,7 @@ class Naa200R:
     Example:
     >>> naa200r = Naa200R()
     >>> await naa200r.initialize()
-    >>> await naa220r.analyze_all()
+    >>> await naa200r.analyze_all()
     >>> await naa200r.save()
     """
 

@@ -29,29 +29,32 @@ class TradingViewIntegration:
     >>> await tv.handle_all()
     """
 
-    def __init__(self, source: DataSource = DataSource.DB, host: str = "") -> None:
+    def __init__(
+        self, source: DataSource = DataSource.DB, host: str = "", config: dict = {}
+    ) -> None:
         self.source = source
         self.root = StockRootDirectory().root_dir()
         self.curr_dir = os.path.dirname(os.path.abspath(__file__))
-        self.config: Dict[str, int] = {}
+        self.config: Dict[str, int] = config
         self.js_template = ""
         self.host = host
         self.load()
 
     def load(self) -> None:
-        # Load config
-        _ = os.path.join(self.root, "tv-config.json")
-        if not os.path.exists(_):
-            raise FileNotFoundError("tv-config.json not found")
-        with open(_, "r") as f:
-            self.config = json.load(f)
-
         # Load Template
         _ = os.path.join(self.curr_dir, "template.js")
         if not os.path.exists(_):
             raise FileNotFoundError("template.js not found")
         with open(_, "r") as f:
             self.js_template = f.read()
+
+        # Load config
+        if not self.config:
+            _ = os.path.join(self.root, "tv-config.json")
+            if not os.path.exists(_):
+                raise FileNotFoundError("tv-config.json not found")
+            with open(_, "r") as f:
+                self.config = json.load(f)
 
         # Load API
         if not self.host:
