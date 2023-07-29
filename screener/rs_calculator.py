@@ -14,7 +14,7 @@ class RelativeStrengthCalculator:
 
     Rationle:
     RS Score = 40% * P3 + 20% * P6 + 20% * P9 + 20% * P12
-    P3, P6, P9 and P12 are the stock’s 3 Months, 6 Months, 9 Months and 12 Months performance respectively. Giving 40% weightage on the last quarter’s performance and 20% on the other three.
+    P3, P6, P9 and P12 are the stock's 3 Months, 6 Months, 9 Months and 12 Months performance respectively. Giving 40% weightage on the last quarter's performance and 20% on the other three.
     """
 
     def __init__(self) -> None:
@@ -114,35 +114,3 @@ class RelativeStrengthCalculator:
             logging.warning(f"Done for {date}")
         else:
             logging.warning(f"No data for {date}")
-
-    async def update_all_rs_in_range(
-        self, start: datetime.date, end: datetime.date
-    ) -> None:
-        """
-        Update RS in a range
-        """
-        # for date in self.calendar:
-        #     if date >= start and date <= end:
-        #         # await self.update_all_rs(date)
-        #         print(date)
-        # date = datetime.date(2023, 7, 14)
-        # await self.update_all_rs(date)
-        pass
-
-async def main():
-    rs = RelativeStrengthCalculator()
-    await rs.initialize()
-    await rs.update_all_rs_in_range(
-        datetime.date(2023, 6, 1), datetime.date(2023, 7, 14)
-    )
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    logging.basicConfig(
-        level=logging.WARNING,
-        format="%(asctime)s %(levelname)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    asyncio.run(main())

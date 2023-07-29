@@ -61,10 +61,8 @@ model Fundamentals {
 }
 
 model TradingCalendar {
-  id        String   @id @default(uuid())
-  date      DateTime @unique @db.Date
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id   String   @id @default(uuid())
+  date DateTime @unique @db.Date
 
   @@index([date])
 }
@@ -85,12 +83,10 @@ model DailyKline {
 }
 
 model RelativeStrength {
-  id        String   @id @default(uuid())
-  ticker    String
-  date      DateTime @db.Date
-  rscore    Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id     String   @id @default(uuid())
+  ticker String
+  date   DateTime @db.Date
+  rscore Float
 
   @@unique([ticker, date])
   @@index([ticker, date])
@@ -106,12 +102,10 @@ model Naa200r {
 }
 
 model Report {
-  id        String   @id @default(uuid())
-  date      DateTime @db.Date
-  kind      String
-  data      Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id   String   @id @default(uuid())
+  date DateTime @db.Date
+  kind String
+  data Json?
 
   @@index([date, kind])
 }
@@ -122,7 +116,6 @@ model Loggings {
   category  String // kline, fundamentals, earning_call
   data      Json?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([category])
 }
