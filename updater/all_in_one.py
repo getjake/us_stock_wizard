@@ -106,11 +106,11 @@ async def run_post_analysis():
 
 
 async def main():
-    await bot.send_msg("US-Stock-Wizard is updating right now...")
     try:
         is_trading_day = await check_trading_day()
         if not is_trading_day:
             return
+        await bot.send_msg("US-Stock-Wizard is updating right now...")
         await get_tickers()
         await get_calendar()
         await get_kline()
