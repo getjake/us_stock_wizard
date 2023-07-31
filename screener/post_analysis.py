@@ -97,9 +97,7 @@ class PostAnalysis:
         stage2_overview = stage2_overview.merge(rs, on="ticker", how="left")
         # sort by rs desc
         stage2_overview = stage2_overview.sort_values(by="rscore", ascending=False)
-        stage2_overview = stage2_overview.drop(
-            columns=["id", "date", "createdAt", "updatedAt"]
-        )
+        stage2_overview = stage2_overview.drop(columns=["id", "date"])  # @DEBUG
         quarterly_data = fundamentals[fundamentals["reportType"] == "QUARTERLY"]
         latest_quarterly_data = (
             quarterly_data.sort_values(["ticker", "reportDate"])
