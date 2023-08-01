@@ -11,6 +11,7 @@ from typing import List, Optional
 from dotenv import load_dotenv
 import httpx
 import yfinance as yf
+import numpy as np
 import pandas as pd
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 from us_stock_wizard.src.common import StockCommon
@@ -63,6 +64,9 @@ class Naa200R:
         kline["date"] = pd.to_datetime(kline["date"]).dt.date
         kline = kline[["ticker", "date", "adjClose"]]
         kline["ma200"] = kline["adjClose"].rolling(200).mean()
+        # check if the last ma200 is nan
+        if kline[["ma200"]].tail(1).isna().values[0][0]:
+            return pd.DataFrame()
         kline[ticker] = (kline["adjClose"] >= kline["ma200"]).astype(int)
         kline.set_index("date", inplace=True)
         return kline[[ticker]]
@@ -89,7 +93,6 @@ class Naa200R:
 
             self.cache["above_200ma"] = self.cache.sum(axis=1)
             self.cache["below_200ma"] = self.cache.shape[1] - self.cache["above_200ma"]
-
             # Added to the summary
             if self.history_summary.empty:
                 self.history_summary = self.cache[["above_200ma", "below_200ma"]]
@@ -98,7 +101,6 @@ class Naa200R:
                     self.history_summary + self.cache[["above_200ma", "below_200ma"]]
                 )
             self.cache = pd.DataFrame()  # Clear cache
-
         # Calculate the percentage
         self.history_summary["total"] = self.history_summary.sum(axis=1)
         # value => above_pct
