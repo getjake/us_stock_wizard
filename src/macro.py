@@ -117,6 +117,6 @@ class Naa200R:
         self.history_summary.reset_index(inplace=True)
         self.history_summary = self.history_summary.tail(300)  # Last 300 days
         self.history_summary["date"] = pd.to_datetime(self.history_summary["date"])
-        data: List[dict] = self.history_summary.reset_index().to_dict("records")
+        data: List[dict] = self.history_summary.to_dict("records")
         await StockDbUtils.insert(table=DbTable.NAA200R, data=data)
         logging.warning("Saved Naa200R to database!")
