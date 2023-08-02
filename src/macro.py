@@ -153,6 +153,18 @@ class Naa200R:
         plt.ylabel("Value")
         plt.grid(True)
 
+        latest_date = recent_df["date"].max().strftime("%Y-%m-%d")
+
+        # add text
+        plt.text(
+            0.95,
+            0.95,
+            f"Latest date: {latest_date}",
+            horizontalalignment="right",
+            verticalalignment="top",
+            transform=plt.gca().transAxes,
+        )  # set the coordinates relative to the axes
+
         plt.tight_layout()  # Adjust the layout to make it fit well
 
         # save the plot as a PNG file
