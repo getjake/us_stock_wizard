@@ -118,7 +118,7 @@ async def main():
         await screen()
         await screen_ipo()
         await run_post_analysis()
-        await bot.send_msg("US-Stock-Wizards Done All")
+        await bot.send_msg("US-Stock-Wizards Post analysis completed!")
         await get_na_a200r()
         await bot.send_msg("NAA200R Done All")
 
