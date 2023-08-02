@@ -93,11 +93,12 @@ async def screen_ipo():
     logging.info("Done IPO Screening")
 
 
-async def get_na_a200r():
+async def get_naa200r():
     naa200r = Naa200R()
     await naa200r.initialize()
     await naa200r.analyze_all()
     await naa200r.save()
+    await naa200r.export_image()
 
 
 async def run_post_analysis():
@@ -119,7 +120,7 @@ async def main():
         await screen_ipo()
         await run_post_analysis()
         await bot.send_msg("US-Stock-Wizards Post analysis completed!")
-        await get_na_a200r()
+        await get_naa200r()
         await bot.send_msg("NAA200R Done All")
 
     except Exception as e:

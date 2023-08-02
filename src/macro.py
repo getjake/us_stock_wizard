@@ -17,6 +17,13 @@ from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 from us_stock_wizard.src.common import StockCommon
 
 
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+from us_stock_wizard import StockRootDirectory
+from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
+
+
 class Naa200R:
     """
     NAA200R
@@ -122,3 +129,31 @@ class Naa200R:
         data: List[dict] = self.history_summary.to_dict("records")
         await StockDbUtils.insert(table=DbTable.NAA200R, data=data)
         logging.warning("Saved Naa200R to database!")
+
+    @staticmethod
+    async def export_image(output_path: Optional[str] = None, days: int = 300) -> None:
+        """
+        Export recent 300 days to image
+        """
+        if not output_path:
+            output_path = os.path.join(
+                StockRootDirectory.root_dir(), "export", "naa200r.png"
+            )
+
+        df = await StockDbUtils.read(table=DbTable.NAA200R, output="df")
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values(by="date")  # ensure the data is sorted by date
+        recent_df = df.tail(days)
+
+        plt.figure(figsize=(12, 6))
+        plt.plot(recent_df["date"], recent_df["value"])
+
+        plt.title("NAA200R the recent 300 days")
+        plt.xlabel("Date")
+        plt.ylabel("Value")
+        plt.grid(True)
+
+        plt.tight_layout()  # Adjust the layout to make it fit well
+
+        # save the plot as a PNG file
+        plt.savefig(output_path, dpi=300)

@@ -8,7 +8,7 @@ airflow_login.py
 dbinit.py
 initdb.py
 secrets.py
-
+export/
 # Airflow sqlite databases
 airflow.db
 unittests.db
