@@ -90,10 +90,10 @@ class Naa200R:
             self.cache = pd.concat(results, axis=1)
             self.cache.fillna(method="ffill", inplace=True)
             self.cache.fillna(value=0, inplace=True)
-
+            if self.cache.empty:
+                continue
             self.cache["above_200ma"] = self.cache.sum(axis=1)
             self.cache["below_200ma"] = self.cache.shape[1] - self.cache["above_200ma"]
-            # Added to the summary
             if self.history_summary.empty:
                 self.history_summary = self.cache[["above_200ma", "below_200ma"]]
             else:
