@@ -2,7 +2,7 @@
 
 > Built by the trader, for traders.
 
-This is a simple but powerfultool to help you find the best stock to buy in US stock market, a great alternative to [Stock Rover](https://www.stockrover.com/).
+This is a simple but powerfultool to help you find the stocks with the best potential to buy in US stock market, a great alternative to [Stock Rover](https://www.stockrover.com/).
 
 It include the following features:
 
@@ -51,6 +51,10 @@ API_HOST=https://your-domain.com/
 
 - Assuming your project is located at `/path/to/us_stock_wizard`, and your timezone is UTC-4, you can add the following cron job to your server:
 
+- Set up the database. Go to `./database/` directory, and run `docker-compose up -d`. Then, run `prisma db push` to create the database schema.
+
+- Set up the cron jobs. Run `crontab -e` to edit the cron jobs. Add the following lines to the file:
+
 ```bash
 # Update fundamental data every day at 9:30
 30 09 * * * python3 /path/to/us_stock_wizard/updater/get_fundamentals.py
@@ -60,7 +64,12 @@ API_HOST=https://your-domain.com/
 05 16 * * * python3 /path/to/us_stock_wizard/updater/all_in_one.py
 ```
 
-Setting up a FastAPI Server
+- Setting up the RestAPI server, go to `./src/apis/` directory, and run `uvicorn main:app --reload --port {your_port}`.
+
+## TradingView(R) Integration
+
+- Edit the `tv-config.json` file under the root directory of this project. Add your watchlist IDs into the config.
+- Everyday after the post analysis completed, run `python3 ./screener/tradingview/tv_integration.py` to generate the Javascript code for you. then paste the code into the Chrome Console, and press enter. It will automatically import all the symbols into your watchlist.
 
 ## Flow Chart
 
