@@ -58,7 +58,6 @@ class PostAnalysis:
         """
         - Stage 2 Analysis
         - Low volatility in recent 7 days.
-        - Income > 0 in recent quarter
         """
         tickers = await StockDbUtils.read(DbTable.TICKERS, output="df")
         tickers = tickers[["ticker", "sector", "industry"]]

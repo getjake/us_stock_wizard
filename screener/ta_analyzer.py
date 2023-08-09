@@ -185,11 +185,13 @@ class TaAnalyzer:
     def _cret_days_vol(self, _kline: pd.DataFrame, days: int, vol: float) -> bool:
         """
         检查最近 n 天的波动率
+
+        We did not use the hihn and lows, instead, use the close price.
         """
         kline = _kline.copy()
         # Get the last `days` row
         kline = kline.iloc[-days:, :]
-        high = kline.high.max()
-        low = kline.low.min()
+        high = kline.close.max()
+        low = kline.close.min()
         res = high / low <= 1 + vol
         return res
