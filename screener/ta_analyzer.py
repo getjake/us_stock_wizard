@@ -94,7 +94,7 @@ class TaAnalyzer:
                 _ = self._cret_minervini(kline, months=1)
                 result[cret] = _
             elif cret == TaMeasurements.SEVEN_DAY_LOW_VOLATILITY.value:
-                _ = self._cret_days_vol(kline, days=7, vol=0.1)
+                _ = self._cret_days_vol(kline, days=7, vol=0.12)
                 result[cret] = _
             else:
                 raise ValueError(f"Unknown criteria: {cret}")
