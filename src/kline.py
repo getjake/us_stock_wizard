@@ -335,11 +335,17 @@ class KlineFetch:
             print("All Groups:", len(ticker_pairs))
             for pair in ticker_pairs:
                 count += 1
-                logging.warning(
-                    f"Downloading pair {pair}: {count} / {len(ticker_pairs)}"
-                )
-                self.download_cache(pair)
-                await asyncio.gather(*(self.handle_ticker(ticker) for ticker in pair))
-                logging.warning(f"Done for {pair}")
+                try:
+                    logging.warning(
+                        f"Downloading pair {pair}: {count} / {len(ticker_pairs)}"
+                    )
+                    self.download_cache(pair)
+                    await asyncio.gather(
+                        *(self.handle_ticker(ticker) for ticker in pair)
+                    )
+                    logging.warning(f"Done for {pair}")
 
-                await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.1)
+                except Exception as e:
+                    logging.error(f"Error in {pair}: {e}")
+                    continue
