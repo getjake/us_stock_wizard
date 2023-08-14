@@ -120,8 +120,6 @@ async def main():
         await screen_ipo()
         await run_post_analysis()
         await bot.send_msg("US-Stock-Wizards Post analysis completed!")
-        await get_naa200r()
-        await bot.send_msg("NAA200R Done All")
 
     except Exception as e:
         err = f"US-Stock-Wizard all-in-one Error: {e}"
