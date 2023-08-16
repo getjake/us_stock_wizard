@@ -161,6 +161,19 @@ class TaAnalyzer:
         if max_drawdown < -0.35:  # 35% Max drawdown
             c_12 = False
 
+        logging.warning(f"c_1: {c_1}")
+        logging.warning(f"c_2: {c_2}")
+        logging.warning(f"c_3: {c_3}")
+        logging.warning(f"c_4: {c_4}")
+        logging.warning(f"c_5: {c_5}")
+        logging.warning(f"c_6: {c_6}")
+        logging.warning(f"c_7: {c_7}")
+        logging.warning(f"c_8: {c_8}")
+        logging.warning(f"c_9: {c_9}")
+        logging.warning(f"c_10: {c_10}")
+        logging.warning(f"c_11: {c_11}")
+        logging.warning(f"c_12: {c_12}")
+
         # Result
         result = (
             sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12]) >= 12
