@@ -4,6 +4,12 @@
 
 This is a simple but powerfultool to help you find the stocks with the best potential to buy in US stock market, a great alternative to [Stock Rover](https://www.stockrover.com/).
 
+The goal of this project is to
+
+- Help you find the stocks with great technical (high reward and low risk) buy points.
+- Screen the stocks with great fundamental data.
+- Screen the top leaders in whole markets with your own criteria.
+
 It include the following features:
 
 - [x] Find all the symbols in the US stock market (NYSE, NASDAQ)
@@ -11,6 +17,7 @@ It include the following features:
 - [x] Automatically download daily candlestick chart for all the stocks in the US stock market.
 - [x] Automacatlly calcuate the Relative Strength for all stocks, and calcuate the NAA200R for all stocks in NASDAQ.
 - [x] Filter all stocks meeting your criteria.
+- [x] Fully Customizable and Powerful filters, you can add your own filters, and add your own indicators.
 - [x] Automatically generate a report in Google Drive for you.
 - [x] Fully integrated with TradingView(R), let you import over 1,000+ symbols into your watchlist with one click.
 - [x] Automatically notify you when app starts, and when the report is generated.
