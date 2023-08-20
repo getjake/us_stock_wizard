@@ -211,18 +211,17 @@ class TradingCalendar:
         self.nyse = mcal.get_calendar(StockMarket.NYSE)
 
     def get_calendar(
-        self, days_before: int = 90, days_forward: int = 90
+        self, days_before: int = 300, days_forward: int = 90
     ) -> List[pd.Timestamp]:
-        # 90 days before
-        ninthy_days_before = (
-            pd.Timestamp.today() - pd.Timedelta(days=days_before)
-        ).strftime("%Y-%m-%d")
+        _days_before = (pd.Timestamp.today() - pd.Timedelta(days=days_before)).strftime(
+            "%Y-%m-%d"
+        )
         later = (pd.Timestamp.today() + pd.Timedelta(days=days_forward)).strftime(
             "%Y-%m-%d"
         )
 
         result: List[pd.Timestamp] = self.nyse.schedule(
-            start_date=ninthy_days_before, end_date=later
+            start_date=_days_before, end_date=later
         ).index.tolist()
         return result
 
