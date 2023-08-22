@@ -92,7 +92,7 @@ class RelativeStrengthCalculator:
         logging.warning(f"{ticker} RS: {rs} on date {date}")
         return rs
 
-    async def update_all_rs(self, date: Optional[datetime.date] = None) -> pd.DataFrame:
+    async def update_all_rs(self, date: Optional[datetime.date] = None) -> bool:
         """ """
         if not date:
             date = pd.Timestamp.today().date()
@@ -111,6 +111,8 @@ class RelativeStrengthCalculator:
             await StockDbUtils.insert(
                 DbTable.RELATIVE_STRENGTH, rs_df.to_dict(orient="records")
             )
-            logging.warning(f"Done for {date}")
-        else:
-            logging.warning(f"No data for {date}")
+            logging.warning(f"RS Calc Done for {date}")
+            return True
+
+        logging.warning(f"No data for {date}")
+        return False
