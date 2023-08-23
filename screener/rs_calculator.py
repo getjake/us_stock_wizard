@@ -1,6 +1,7 @@
 from typing import Optional, List
 import logging
 import pandas as pd
+import numpy as np
 import datetime
 from prisma import Json
 from us_stock_wizard.database.db_utils import DbTable, StockDbUtils
@@ -15,6 +16,10 @@ class RelativeStrengthCalculator:
     Rationle:
     RS Score = 40% * P3 + 20% * P6 + 20% * P9 + 20% * P12
     P3, P6, P9 and P12 are the stock's 3 Months, 6 Months, 9 Months and 12 Months performance respectively. Giving 40% weightage on the last quarter's performance and 20% on the other three.
+
+    >>> rs = RelativeStrengthCalculator()
+    >>> await rs.initialize()
+
     """
 
     def __init__(self) -> None:
@@ -50,6 +55,77 @@ class RelativeStrengthCalculator:
         kline["date"] = pd.to_datetime(kline["date"]).dt.date
         kline = kline[kline["date"] <= deadline]
         return kline
+
+    async def batch_get_rs(
+        self, ticker: str, start: datetime.date, end: datetime.date
+    ) -> Optional[pd.DataFrame]:
+        """
+        Calc the RS of a spec stock in a date range.
+        """
+        kline = await self.get_kline(ticker)
+        if kline.shape[0] < 252:
+            logging.warning(f"Insufficient data for {ticker}, skip")
+            return None
+        kline["date"] = pd.to_datetime(kline["date"])
+        kline.set_index("date", inplace=True)
+        kline = kline.resample("D").ffill()
+        kline["90d_ago"] = kline["adjClose"].shift(90)
+        kline["180d_ago"] = kline["adjClose"].shift(180)
+        kline["270d_ago"] = kline["adjClose"].shift(270)
+        kline["360d_ago"] = kline["adjClose"].shift(360)
+        kline[ticker] = (
+            kline["adjClose"] / kline["90d_ago"] * 0.4
+            + kline["adjClose"] / kline["180d_ago"] * 0.2
+            + kline["adjClose"] / kline["270d_ago"] * 0.2
+            + kline["adjClose"] / kline["360d_ago"] * 0.2
+        )
+
+        # filter start and end date
+        _start = pd.to_datetime(start)
+        _end = pd.to_datetime(end)
+        kline = kline[kline.index >= _start]
+        kline = kline[kline.index <= _end]
+        result = kline[[ticker]]
+        return result
+
+    async def batch_get_all_rs(
+        self, start: datetime.date, end: datetime.date
+    ) -> pd.DataFrame:
+        """
+        Get RS of all stocks in a date range
+        """
+        combined = pd.DataFrame()
+        for ticker in self.stocks:
+            logging.warning(f"Batch RS Calc: {ticker} - {start} - {end}")
+            rs_df = await self.batch_get_rs(ticker, start, end)
+            if rs_df is None:
+                continue
+            combined = pd.concat([combined, rs_df], axis=1)
+
+        succ_count = 0
+        fail_count = 0
+        for index, row in combined.iterrows():
+            # row to a new df
+            date = index
+            _df = pd.DataFrame(row)
+            _df.dropna(inplace=True)
+            _df["rank"] = _df[_df.columns[0]].rank(ascending=True)
+            _df["rscore"] = _df["rank"] / len(_df["rank"]) * 100
+            _df["rscore"] = _df["rscore"].astype(int)
+            _df.reset_index(inplace=True)
+            _df.rename(columns={"index": "ticker"}, inplace=True)
+            _df["date"] = pd.Timestamp(date)
+            _df = _df[["date", "rscore", "ticker"]]
+            if not _df.empty:
+                await StockDbUtils.insert(
+                    DbTable.RELATIVE_STRENGTH, _df.to_dict(orient="records")
+                )
+                logging.warning(f"Batch RS Calc Done for {date}")
+                succ_count += 1
+
+            logging.warning(f"Batch RS Calc: No data for {date}")
+            fail_count += 1
+        logging.warning(f"Batch RS Calc: {succ_count} succ, {fail_count} fail")
 
     async def get_rs(
         self,
