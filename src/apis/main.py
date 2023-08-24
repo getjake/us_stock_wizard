@@ -50,6 +50,9 @@ async def get_plot(ticker: str):
     """
     Get plot by ticker
     """
-    plot = StockPlot(ticker.upper())
-    result = await plot.handle()
-    return result
+    try:
+        plot = StockPlot(ticker.upper())
+        result = await plot.handle()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
