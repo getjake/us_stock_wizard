@@ -105,7 +105,6 @@ class RelativeStrengthCalculator:
         succ_count = 0
         fail_count = 0
         for index, row in combined.iterrows():
-            # row to a new df
             date = index
             _df = pd.DataFrame(row)
             _df.dropna(inplace=True)
@@ -122,9 +121,9 @@ class RelativeStrengthCalculator:
                 )
                 logging.warning(f"Batch RS Calc Done for {date}")
                 succ_count += 1
-
-            logging.warning(f"Batch RS Calc: No data for {date}")
-            fail_count += 1
+            else:
+                logging.warning(f"Batch RS Calc: No data for {date}")
+                fail_count += 1
         logging.warning(f"Batch RS Calc: {succ_count} succ, {fail_count} fail")
 
     async def get_rs(
