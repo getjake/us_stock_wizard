@@ -5,8 +5,10 @@ Run:
 > uvicorn main:app --reload --port 8090
 """
 from typing import Optional, List
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
+from us_stock_wizard.src.plot import StockPlot
 
 app = FastAPI()
 
@@ -41,3 +43,13 @@ async def get_tickers() -> Optional[List[str]]:
     tickers["market_ticker"] = tickers["market"] + ":" + tickers["ticker"]
     ticker_exported = tickers["market_ticker"].tolist()
     return ticker_exported
+
+
+@app.get("/plot/{ticker}", response_class=HTMLResponse)
+async def get_plot(ticker: str):
+    """
+    Get plot by ticker
+    """
+    plot = StockPlot(ticker)
+    result = await plot.handle()
+    return result
