@@ -59,20 +59,13 @@ class StockPlot:
             )
         )
 
-        # Setting the layout of the plot
-        # fig.update_layout(
-        #     title=f"{self.ticker} OHLC and RS",
-        #     yaxis=dict(title="OHLC"),
-        #     yaxis2=dict(title="RS", overlaying="y", side="right"),
-        # )
-
         fig.update_layout(
             title=f"{self.ticker} - RS",
             yaxis=dict(
                 domain=[
                     0.35,
                     1,
-                ],  # Adjust domain to make space for volume at the bottom
+                ],
                 title="OHLC",
             ),
             yaxis2=dict(title="RS", overlaying="y", side="right"),
