@@ -8,3 +8,4 @@ asyncify
 google-api-python-client
 XlsxWriter
 fastapi
+plotly

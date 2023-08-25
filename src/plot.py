@@ -34,6 +34,13 @@ class StockPlot:
         df = kline.join(rs, how="inner")
         df.reset_index(inplace=True)
         df.sort_values(by="date", inplace=True)
+
+        # Volume Colors
+        volume_colors = [
+            "green" if close > open_ else "red"
+            for close, open_ in zip(df["close"], df["open"])
+        ]
+
         fig = go.Figure()
 
         # Adding OHLC chart
@@ -49,9 +56,16 @@ class StockPlot:
             )
         )
 
-        # Volume
-        fig.add_trace(go.Bar(x=df["date"], y=df["volume"], name="Volume", yaxis="y3"))
-
+        # Adding volume as bars with conditional colors
+        fig.add_trace(
+            go.Bar(
+                x=df["date"],
+                y=df["volume"],
+                marker_color=volume_colors,
+                name="Volume",
+                yaxis="y3",
+            )
+        )
         # Rs
         fig.add_trace(
             go.Scatter(
@@ -68,10 +82,11 @@ class StockPlot:
                 ],
                 title="OHLC",
             ),
-            yaxis2=dict(title="RS", overlaying="y", side="right"),
+            yaxis2=dict(title="RS", overlaying="y", side="right", range=[0, 100]),
             yaxis3=dict(
                 domain=[0, 0.3], title="Volume"  # Positioning volume at the bottom
             ),
+            xaxis_rangeslider_visible=False,
         )
 
         # fig.show()
