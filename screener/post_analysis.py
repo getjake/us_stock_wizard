@@ -62,10 +62,10 @@ class PostAnalysis:
         tickers = await StockDbUtils.read(DbTable.TICKERS, output="df")
         tickers = tickers[["ticker", "sector", "industry"]]
 
-        # relative strength - today
-        rs = await StockDbUtils.read(DbTable.RELATIVE_STRENGTH, output="df")
+        rs = await StockDbUtils.read(
+            DbTable.RELATIVE_STRENGTH, where={"date": self.date_ts}, output="df"
+        )
         rs["date"] = pd.to_datetime(rs["date"]).dt.date
-        rs = rs[rs["date"] == self.date]
 
         # fundamental
         fundamentals = await StockDbUtils.read(DbTable.FUNDAMENTALS, output="df")
