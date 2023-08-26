@@ -219,8 +219,8 @@ class PostAnalysis:
 
 
 async def main():
-    yesterday = datetime.date.today() - datetime.timedelta(days=1)
-    pa = PostAnalysis(yesterday)
+    today = datetime.date.today()
+    pa = PostAnalysis(today)
     await pa.analyze_all()
     print("Done!")
 
