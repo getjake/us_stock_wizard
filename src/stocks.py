@@ -93,7 +93,8 @@ class StockTickers:
         _data.rename(columns=columns, inplace=True)
         _data["ipoYear"] = _data["ipoYear"].apply(lambda x: int(x) if x else -1)
         _data["market"] = market
-
+        # Filter out acquisition
+        _data = _data[~_data["name"].str.contains("Acquisition")]
         _data = _data[columns.values()]
         all_results = _data.to_dict(orient="records")
         # insert into database
