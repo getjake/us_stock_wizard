@@ -74,9 +74,11 @@ class PostAnalysis:
             DbTable.REPORT, where={"date": self.date_ts}, output="df"
         )
         # report stage2 data
-        stage2_stocks = report.loc[report["kind"] == "stage2", "data"].values[0]
+        stage2_stocks: List[str] = report.loc[
+            report["kind"] == "stage2", "data"
+        ].values[0]
         # low volatility data
-        low_volatility_stocks = report.loc[
+        low_volatility_stocks: List[str] = report.loc[
             report["kind"] == "seven_day_low_volatility", "data"
         ].values[0]
 
@@ -89,7 +91,13 @@ class PostAnalysis:
         stage2_low_volatility_stocks = pd.DataFrame(
             stage2_low_volatility_stocks, columns=["ticker"]
         )
-        stage2_overview = stage2_low_volatility_stocks.merge(
+
+        # Not filtered by Low Volatility
+        _stage2_stocks = pd.DataFrame(stage2_stocks, columns=["ticker"])
+
+        # stage2_low_volatility_stocks -> Low
+        # _stage2_stocks -> Original
+        stage2_overview = _stage2_stocks.merge(
             tickers, on="ticker", how="left"
         )
         # join rs
