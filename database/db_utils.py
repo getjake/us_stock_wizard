@@ -129,4 +129,4 @@ class DbCleaner:
             await StockDbUtils.delete(
                 table=DbTable.FUNDAMENTALS, where={"ticker": ticker}
             )
-            # Last steps -> await StockDbUtils.delete(table=DbTable.TICKERS, where={"ticker": ticker})
+            await StockDbUtils.delete(table=DbTable.TICKERS, where={"ticker": ticker})
