@@ -62,10 +62,10 @@ class PostAnalysis:
         tickers = await StockDbUtils.read(DbTable.TICKERS, output="df")
         tickers = tickers[["ticker", "sector", "industry"]]
 
-        # relative strength - today
-        rs = await StockDbUtils.read(DbTable.RELATIVE_STRENGTH, output="df")
+        rs = await StockDbUtils.read(
+            DbTable.RELATIVE_STRENGTH, where={"date": self.date_ts}, output="df"
+        )
         rs["date"] = pd.to_datetime(rs["date"]).dt.date
-        rs = rs[rs["date"] == self.date]
 
         # fundamental
         fundamentals = await StockDbUtils.read(DbTable.FUNDAMENTALS, output="df")
@@ -74,9 +74,11 @@ class PostAnalysis:
             DbTable.REPORT, where={"date": self.date_ts}, output="df"
         )
         # report stage2 data
-        stage2_stocks = report.loc[report["kind"] == "stage2", "data"].values[0]
+        stage2_stocks: List[str] = report.loc[
+            report["kind"] == "stage2", "data"
+        ].values[0]
         # low volatility data
-        low_volatility_stocks = report.loc[
+        low_volatility_stocks: List[str] = report.loc[
             report["kind"] == "seven_day_low_volatility", "data"
         ].values[0]
 
@@ -89,7 +91,13 @@ class PostAnalysis:
         stage2_low_volatility_stocks = pd.DataFrame(
             stage2_low_volatility_stocks, columns=["ticker"]
         )
-        stage2_overview = stage2_low_volatility_stocks.merge(
+
+        # Not filtered by Low Volatility
+        _stage2_stocks = pd.DataFrame(stage2_stocks, columns=["ticker"])
+
+        # stage2_low_volatility_stocks -> Low
+        # _stage2_stocks -> Original
+        stage2_overview = _stage2_stocks.merge(
             tickers, on="ticker", how="left"
         )
         # join rs
@@ -219,8 +227,8 @@ class PostAnalysis:
 
 
 async def main():
-    yesterday = datetime.date.today() - datetime.timedelta(days=1)
-    pa = PostAnalysis(yesterday)
+    today = datetime.date.today()
+    pa = PostAnalysis(today)
     await pa.analyze_all()
     print("Done!")
 

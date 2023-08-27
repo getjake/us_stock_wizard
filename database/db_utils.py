@@ -64,6 +64,22 @@ class StockDbUtils:
         return _
 
     @staticmethod
+    async def read_groupby(table: DbTable, group_by: List[str]) -> List[dict]:
+        """
+        Read data from a given table and groupby ..
+
+        Args:
+            table (DbTable): table name
+            group_by (List[str]): groupby columns
+        """
+        db = Prisma()
+        await db.connect()
+        _target = getattr(db, table.lower())
+        result = await _target.group_by(group_by)
+        await db.disconnect()
+        return result
+
+    @staticmethod
     async def update(table: DbTable, where: dict, data: dict):
         """
         Update data from a given table
