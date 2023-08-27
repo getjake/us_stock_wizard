@@ -102,3 +102,31 @@ class StockDbUtils:
         result = await _target.delete_many(where=where)
         await db.disconnect()
         return result
+
+
+class DbCleaner:
+    @staticmethod
+    async def remove_acquisitions():
+        """
+        Remove all acquisitions firms
+        """
+        data = await StockDbUtils.read(table=DbTable.TICKERS, output="df")
+        data["acquisition"] = data["name"].apply(lambda x: "acquisition" in x.lower())
+        # count the number of acquisitions
+        data["acquisition"].value_counts()
+        # fitler the tickers
+        data = data[data["acquisition"] == True]
+        # tickers
+        tickers = data.ticker.values.tolist()
+
+        for ticker in tickers:
+            await StockDbUtils.delete(
+                table=DbTable.DAILY_KLINE, where={"ticker": ticker}
+            )
+            await StockDbUtils.delete(
+                table=DbTable.EARNING_CALL, where={"ticker": ticker}
+            )
+            await StockDbUtils.delete(
+                table=DbTable.FUNDAMENTALS, where={"ticker": ticker}
+            )
+            # Last steps -> await StockDbUtils.delete(table=DbTable.TICKERS, where={"ticker": ticker})

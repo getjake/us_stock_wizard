@@ -95,6 +95,7 @@ class StockTickers:
         _data["market"] = market
         # Filter out acquisition
         _data = _data[~_data["name"].str.contains("Acquisition")]
+        _data = _data[~_data["name"].str.contains("acquisition")]
         _data = _data[columns.values()]
         all_results = _data.to_dict(orient="records")
         # insert into database
