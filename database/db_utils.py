@@ -1,5 +1,6 @@
-from prisma import Prisma
+import datetime
 from typing import List
+from prisma import Prisma
 import pandas as pd
 
 
@@ -129,4 +130,26 @@ class DbCleaner:
             await StockDbUtils.delete(
                 table=DbTable.FUNDAMENTALS, where={"ticker": ticker}
             )
-            # Last steps -> await StockDbUtils.delete(table=DbTable.TICKERS, where={"ticker": ticker})
+            await StockDbUtils.delete(table=DbTable.TICKERS, where={"ticker": ticker})
+
+    @staticmethod
+    async def remove_klines(days_ago: int = 400):
+        """
+        Remove outdated ohlc data to save space.
+        """
+        result = await StockDbUtils.read_groupby(DbTable.DAILY_KLINE, group_by=["date"])
+        result = sorted(result, key=lambda x: x["date"])
+        result = [
+            x
+            for x in result
+            if x["date"]
+            < (datetime.datetime.now() - datetime.timedelta(days=days_ago)).strftime(
+                "%Y-%m-%d"
+            )
+        ]
+
+        for _date in result:
+            number = await StockDbUtils.delete(
+                DbTable.DAILY_KLINE, {"date": _date["date"]}
+            )
+            print(f"Remove {_date['date']} with {number} rows.")
