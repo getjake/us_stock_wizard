@@ -160,7 +160,7 @@ class Fundamentals:
         data = self.get_earning_call_data()
         data = self._process_earning_call_data(data)
         await StockDbUtils.insert(table=DbTable.EARNING_CALL, data=data)
-        logging.info("Done")
+        logging.info("Earning call data updated.")
 
     @staticmethod
     def _process_report(ticker: str, data: dict, report_type: ReportType) -> List[dict]:
@@ -246,12 +246,9 @@ class Fundamentals:
 
     async def handle_all_is_data(self, source: str = "alphavantage") -> None:
         """
-        Process the Income Statement data for all tickers
+        Process the Income Statement data for all tickers, including those non-updated and updated.
         """
         all_tickers: pd.DataFrame = await StockCommon.get_stock_list(format="df")
-
-        earning_call_data = await StockDbUtils.read(table=DbTable.EARNING_CALL)
-        earning_call_data = StockCommon.convert_to_dataframe(earning_call_data)
 
         # Null, those tickers have no fundamental data and never fetched before
         all_tickers_null = all_tickers[all_tickers["fundamentalsUpdatedAt"].isnull()]
@@ -264,15 +261,19 @@ class Fundamentals:
             all_tickers_not_null["fundamentalsUpdatedAt"]
         )
 
-        # Handle null
+        # Proritize those tickers which have not been updated before
         null_list = all_tickers_null["ticker"].tolist()
-        # randomize the list
+        not_null_list = all_tickers_not_null["ticker"].tolist()
         np.random.shuffle(null_list)
-        for ticker in null_list:
-            logging.info(f"Start for {ticker}")
-            await self.handle_is_data(ticker, source=source)
-            # Always mark as succeed, even if failed
-            logging.info(f"Done for {ticker}")
+
+        all_list = null_list + not_null_list
+        for ticker in all_list:
+            logging.info(f"Fundamental Start for {ticker}")
+            succ = await self.handle_is_data(ticker, source=source)
+            if succ:
+                logging.info(f"Fundamental Done for {ticker}")
+            else:
+                logging.error(f"Fundamental Failed for {ticker}")
             if source == "yfinance":
                 await asyncio.sleep(2)
             else:
