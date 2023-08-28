@@ -191,3 +191,42 @@ class RelativeStrengthCalculator:
 
         logging.warning(f"No data for {date}")
         return False
+
+    async def export_high_rs(
+        self, days_ago: int = 90, threshold: int = 85, lasting: int = 10
+    ) -> None:
+        """
+        Export high RS stocks
+
+        Args:
+        - days_ago: how many days ago to start the search
+        - threshold: the RS threshold
+        - lasting: how many days the RS should last
+        """
+        assert days_ago >= lasting, "days_ago should be greater than lasting"
+
+        results: List[str] = []
+        for ticker in self.stocks:
+            rs_data = await StockDbUtils.read(
+                DbTable.RELATIVE_STRENGTH, where={"ticker": ticker}, output="df"
+            )
+            if rs_data.shape[0] <= days_ago:
+                continue
+
+            rs_data.sort_values(by=["date"], inplace=True)
+            data = rs_data.tail(days_ago)["rscore"] >= threshold
+            # lasting days
+            data = data.rolling(lasting).sum() >= lasting
+            _ = True in data.unique()
+            if _:
+                results.append(ticker)
+
+        # Export to database
+
+        _ = {
+            "date": pd.to_datetime(datetime.date.today()),
+            "kind": "high_rs",
+            "data": Json(results),
+        }
+        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
+        logging.warning(f"High RS stocks count: {len(results)}")
