@@ -93,3 +93,7 @@ Once you have installed the project, it will generate a daily report for you aut
 Below is an example of the report:
 
 ![Report](./assets/report.png)
+
+Now we also integrate the RS-History Chart for the stocks, visit `http://your-domain.com/plot/{symbol}` to see the chart.
+
+![RS-Chart](./assets/rs-chart.png)
