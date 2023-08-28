@@ -1,6 +1,7 @@
 """
 Post Analysis to get what we really want!
 """
+import logging
 import asyncio
 import tempfile
 from collections import defaultdict
@@ -46,6 +47,7 @@ class PostAnalysis:
 
         await self.analyze_stage2()
         await self.analyze_stage2_diff()
+        await self.analyze_stage2_high_rs()
         await self.analyze_ipo()
 
         # Create excel file to tempdir
@@ -97,9 +99,7 @@ class PostAnalysis:
 
         # stage2_low_volatility_stocks -> Low
         # _stage2_stocks -> Original
-        stage2_overview = _stage2_stocks.merge(
-            tickers, on="ticker", how="left"
-        )
+        stage2_overview = _stage2_stocks.merge(tickers, on="ticker", how="left")
         # join rs
         stage2_overview = stage2_overview.merge(rs, on="ticker", how="left")
         # sort by rs desc
@@ -171,9 +171,10 @@ class PostAnalysis:
         把stage2的数据和上一次的数据对比, 看看哪些股票是新的
         """
         # Get stage2 data
+        _date = self.date_ts - pd.Timedelta(days=15)  # Less data, faster
         stage2s: pd.DataFrame = await StockDbUtils.read(
             table=DbTable.REPORT,
-            where={"kind": "PostAnalysis_stage2"},
+            where={"kind": "PostAnalysis_stage2", "date": {"gt": _date}},
             output="df",
         )
         stage2s = stage2s.sort_values(by="date", ascending=True)
@@ -202,8 +203,29 @@ class PostAnalysis:
 
         _df = self.to_save["stage2"].copy()
         _df = _df[_df["ticker"].isin(diff)]
-        # Save to self.to_save
         self.to_save["stage2_diff"] = _df
+        return
+
+    async def analyze_stage2_high_rs(self) -> None:
+        """
+        Analyze stage2 high RS stocks
+        """
+        # High RS stock list
+        _ = await StockDbUtils.read_first(
+            DbTable.REPORT,
+            where={"kind": "high_rs"},
+        )
+        if not _:
+            logging.warning("No high_rs data. Skip.")
+            return
+        high_rs: List[str] = _["data"]
+        if not high_rs:
+            logging.warning("No high_rs data in list. Skip.")
+            return
+
+        stage2 = self.to_save["stage2"]
+        stage2_high_rs = stage2[stage2["ticker"].isin(high_rs)]
+        self.to_save["stage2_high_rs"] = stage2_high_rs
         return
 
     async def analyze_ipo(self) -> None:

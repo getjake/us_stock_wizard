@@ -1,5 +1,5 @@
 import datetime
-from typing import List
+from typing import List, Optional
 from prisma import Prisma
 import pandas as pd
 
@@ -63,6 +63,26 @@ class StockDbUtils:
             _ = StockDbUtils.convert_to_dataframe(result)
         await db.disconnect()
         return _
+
+    @staticmethod
+    async def read_first(
+        table: DbTable, where: dict = {}, date_arg: str = "date"
+    ) -> Optional[dict]:
+        """
+        Find the first entry from a given table
+
+        Args:
+            table (DbTable): table name
+            where (dict, optional): filter condition. Defaults to {}.
+            date_arg (str, optional): date column name. Defaults to "date". Will fetch entry with latest date.
+        """
+        db = Prisma()
+        await db.connect()
+        _target = getattr(db, table.lower())
+        res = await _target.find_first(where=where, order={date_arg: "desc"})
+        if not res:
+            return None
+        return res.dict()
 
     @staticmethod
     async def read_groupby(table: DbTable, group_by: List[str]) -> List[dict]:
