@@ -193,7 +193,7 @@ class RelativeStrengthCalculator:
         return False
 
     async def export_high_rs(
-        self, days_ago: int = 90, threshold: int = 85, lasting: int = 10
+        self, days_ago: int = 90, threshold: int = 80, lasting: int = 10
     ) -> None:
         """
         Export high RS stocks
