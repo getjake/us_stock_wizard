@@ -134,7 +134,11 @@ class TaAnalyzer:
         # Conditions
         latest = kline.iloc[-1]
         c_1 = latest["adjClose"] > latest["ma150"]
-        c_2 = latest["ma150"] > latest["ma200"]
+
+        # c_2 Disable for now
+        # c_2 = latest["ma150"] > latest["ma200"]
+        c_2 = True
+
         # c_3
         ma200 = kline["ma200"]
         ma200 = ma200[-20:]  # last 20 days
@@ -145,7 +149,10 @@ class TaAnalyzer:
         c_7 = self.rs > 70
         c_8 = latest["adjClose"] > latest["ma50"]
         c_9 = latest["adjClose"] >= 10
-        c_10 = latest["adjClose"] * latest["volume"] >= 1000000
+
+        # c_10 Disable for now
+        # c_10 = latest["adjClose"] * latest["volume"] >= 1000000
+        c_10 = True
 
         # c_11 - No more than 30% of the MA50
         c_11 = latest["adjClose"] <= latest["ma50"] * 1.3
