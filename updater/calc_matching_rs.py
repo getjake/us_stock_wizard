@@ -4,9 +4,13 @@ Calculate the RS of all stocks in a date range, if match the criteria, save to d
 import asyncio
 import logging
 from us_stock_wizard.screener.rs_calculator import RelativeStrengthCalculator
+from us_stock_wizard.updater.all_in_one import check_trading_day
 
 
 async def main():
+    is_trading_day = await check_trading_day()
+    if not is_trading_day:
+        return
     rsc = RelativeStrengthCalculator()
     await rsc.initialize()
     await rsc.export_high_rs(days_ago=90, threshold=85, lasting=10)
