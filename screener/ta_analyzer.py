@@ -118,7 +118,7 @@ class TaAnalyzer:
         7. RS (relative strength) is above 70.
         8. Current price is above MA50.
         9. Stock Price > 10
-        10. Daily Volume USD > 1 million
+        10. Daily Volume USD > 200k USD
         11. Current close no more than 30% of the MA50
         12. Max Drawdown no more than 35% in the recent 90 trading days.
         """
@@ -147,11 +147,10 @@ class TaAnalyzer:
         c_8 = latest["adjClose"] > latest["ma50"]
         c_9 = latest["adjClose"] >= 10
 
-        # c_10 Disable for now
-        # c_10 = latest["adjClose"] * latest["volume"] >= 1000000
-        c_10 = True
+        # Volume in USD
+        c_10 = latest["adjClose"] * latest["volume"] >= 200000  # 200k USD Volume
 
-        # c_11 - No more than 30% of the MA50
+        # c_11 - No more than 30% of the MA50 - Miss the powerplay
         # c_11 = latest["adjClose"] <= latest["ma50"] * 1.3
         c_11 = True  # Disable for now
 
@@ -179,11 +178,8 @@ class TaAnalyzer:
         logging.warning(f"c_11: {c_11}")
         logging.warning(f"c_12: {c_12}")
 
-        # Result -> 10 out of 12
-        threshold = 10
         result = (
-            sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12])
-            >= threshold
+            sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12]) >= 12
         )
         return result
 
