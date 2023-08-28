@@ -235,9 +235,10 @@ class PostAnalysis:
         tickers = await StockDbUtils.read(DbTable.TICKERS, output="df")
         tickers = tickers[["ticker", "sector", "industry"]]
 
+        _date = self.date_ts - pd.Timedelta(days=15)  # Less data, faster
         ipos: pd.DataFrame = await StockDbUtils.read(
             table=DbTable.REPORT,
-            where={"kind": "ipo"},
+            where={"kind": "ipo", "date": {"gt": _date}},
             output="df",
         )
         ipos = ipos.sort_values(by="date", ascending=True)
