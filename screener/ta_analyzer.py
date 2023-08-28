@@ -134,10 +134,7 @@ class TaAnalyzer:
         # Conditions
         latest = kline.iloc[-1]
         c_1 = latest["adjClose"] > latest["ma150"]
-
-        # c_2 Disable for now
-        # c_2 = latest["ma150"] > latest["ma200"]
-        c_2 = True
+        c_2 = latest["ma150"] > latest["ma200"]
 
         # c_3
         ma200 = kline["ma200"]
@@ -155,7 +152,8 @@ class TaAnalyzer:
         c_10 = True
 
         # c_11 - No more than 30% of the MA50
-        c_11 = latest["adjClose"] <= latest["ma50"] * 1.3
+        # c_11 = latest["adjClose"] <= latest["ma50"] * 1.3
+        c_11 = True  # Disable for now
 
         # Max Drawdown
         c_12 = True
@@ -181,9 +179,11 @@ class TaAnalyzer:
         logging.warning(f"c_11: {c_11}")
         logging.warning(f"c_12: {c_12}")
 
-        # Result
+        # Result -> 10 out of 12
+        threshold = 10
         result = (
-            sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12]) >= 12
+            sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12])
+            >= threshold
         )
         return result
 
