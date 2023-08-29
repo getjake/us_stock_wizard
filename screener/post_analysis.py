@@ -223,6 +223,14 @@ class PostAnalysis:
             logging.warning("No high_rs data in list. Skip.")
             return
 
+        _ = {
+            "date": pd.to_datetime(self.date),
+            "kind": "PostAnalysis_stage2_high_rs",
+            "data": Json(high_rs),
+        }
+
+        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
+
         stage2 = self.to_save["stage2"]
         stage2_high_rs = stage2[stage2["ticker"].isin(high_rs)]
         self.to_save["stage2_high_rs"] = stage2_high_rs

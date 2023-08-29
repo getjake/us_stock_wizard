@@ -107,7 +107,7 @@ class Fundamentals:
 
         return _
 
-    def get_is_data(self, stock: str, source: str = DataSource.YFINANCE) -> dict:
+    def get_is_data(self, stock: str, source: str = DataSource.ALPHA_VANTAGE) -> dict:
         """
         Get data from income statement
 
@@ -206,7 +206,7 @@ class Fundamentals:
         return _data.to_dict(orient="records")
 
     async def handle_is_data(
-        self, stock: str, source: str = DataSource.YFINANCE
+        self, stock: str, source: str = DataSource.ALPHA_VANTAGE
     ) -> bool:
         """
         Process the Income Statement data, and save it into the database
