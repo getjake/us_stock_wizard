@@ -20,6 +20,11 @@ from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 from us_stock_wizard.src.common import StockCommon, retry_decorator
 
 
+class DataSource:
+    ALPHA_VANTAGE = "alphavantage"
+    YFINANCE = "yfinance"
+
+
 class ReportType:
     ANNUAL = "ANNUAL"
     QUARTERLY = "QUARTERLY"
@@ -102,17 +107,17 @@ class Fundamentals:
 
         return _
 
-    def get_is_data(self, stock: str, source: str = "yfinance") -> dict:
+    def get_is_data(self, stock: str, source: str = DataSource.YFINANCE) -> dict:
         """
         Get data from income statement
 
         Args:
             stock: The stock ticker
-            source: The source of the data, either "yfinance" or "alphavantage"
+            source: The source of the data, either DataSource.YFINANCE or DataSource.ALPHA_VANTAGE
         """
-        if source == "yfinance":
+        if source == DataSource.YFINANCE:
             return self._get_data_yfinance(stock)
-        if source == "alphavantage":
+        if source == DataSource.ALPHA_VANTAGE:
             params = {
                 "function": "INCOME_STATEMENT",
                 "symbol": stock,
@@ -200,7 +205,9 @@ class Fundamentals:
         _data["reportType"] = report_type
         return _data.to_dict(orient="records")
 
-    async def handle_is_data(self, stock: str, source: str = "yfinance") -> bool:
+    async def handle_is_data(
+        self, stock: str, source: str = DataSource.YFINANCE
+    ) -> bool:
         """
         Process the Income Statement data, and save it into the database
         """
@@ -210,7 +217,7 @@ class Fundamentals:
             await StockDbUtils.update(
                 DbTable.TICKERS,
                 {"ticker": stock},
-                {"fundamentalsUpdatedAt": datetime.now()},
+                {"fundamentalsUpdatedAt": None},  # Remove the updated time
             )
             return False
         quarterly_reports: dict = data.get("quarterlyReports")
@@ -220,7 +227,7 @@ class Fundamentals:
             await StockDbUtils.update(
                 DbTable.TICKERS,
                 {"ticker": stock},
-                {"fundamentalsUpdatedAt": datetime.now()},
+                {"fundamentalsUpdatedAt": None},  # Remove the updated time
             )
             return False
 
@@ -232,11 +239,12 @@ class Fundamentals:
                 table=DbTable.FUNDAMENTALS, data=_quarterly_reports
             )
         if annaul_reports:
-            _annaul_reports = self._process_report(
+            _annual_report = self._process_report(
                 ticker=stock, data=annaul_reports, report_type=ReportType.ANNUAL
             )
-            await StockDbUtils.insert(table=DbTable.FUNDAMENTALS, data=_annaul_reports)
-        logging.info(f"Done for {stock}")
+            await StockDbUtils.insert(table=DbTable.FUNDAMENTALS, data=_annual_report)
+
+        logging.warning(f"Fundamental Successfully updated for {stock}")
         await StockDbUtils.update(
             DbTable.TICKERS,
             {"ticker": stock},
@@ -244,7 +252,7 @@ class Fundamentals:
         )
         return True
 
-    async def handle_all_is_data(self, source: str = "alphavantage") -> None:
+    async def handle_all_is_data(self, source: str = DataSource.ALPHA_VANTAGE) -> None:
         """
         Process the Income Statement data for all tickers, including those non-updated and updated.
         """
@@ -267,20 +275,48 @@ class Fundamentals:
         np.random.shuffle(null_list)
 
         all_list = null_list + not_null_list
-        for ticker in all_list:
+        return await self.update_tickers_data(all_list, source=source)
+
+    async def update_expired_data(
+        self, days_ago: int = 5, source: str = DataSource.ALPHA_VANTAGE
+    ) -> None:
+        """
+        Update the expired data.
+        """
+        _days_ago = pd.Timestamp.today() - pd.Timedelta(days=days_ago)
+        _ = await StockDbUtils.read(
+            table=DbTable.TICKERS, where={"fundamentalsUpdatedAt": {"lte": _days_ago}}
+        )
+        expired_tickers: List[str] = [r.dict()["ticker"] for r in _]
+        _ = await StockDbUtils.read(
+            table=DbTable.TICKERS, where={"fundamentalsUpdatedAt": None}
+        )
+        wrong_tickers: List[str] = [r.dict()["ticker"] for r in _]
+
+        tickers = expired_tickers + wrong_tickers
+        return await self.update_tickers_data(tickers, source=source)
+
+    async def update_tickers_data(
+        self, tickers: List[str], source: str = DataSource.ALPHA_VANTAGE
+    ) -> None:
+        """
+        Update IS data for the given tickers
+        """
+
+        for ticker in tickers:
             logging.info(f"Fundamental Start for {ticker}")
             succ = await self.handle_is_data(ticker, source=source)
             if succ:
                 logging.info(f"Fundamental Done for {ticker}")
             else:
                 logging.error(f"Fundamental Failed for {ticker}")
-            if source == "yfinance":
+            if source == DataSource.YFINANCE:
                 await asyncio.sleep(2)
             else:
                 await asyncio.sleep(10)
 
     async def update_is_data(
-        self, days_ago: int = 7, source: str = "alphavantage"
+        self, days_ago: int = 7, source: str = DataSource.ALPHA_VANTAGE
     ) -> None:
         """
         Update the Income Statement data for tickers which has the earning call less than __ days.
@@ -303,13 +339,11 @@ class Fundamentals:
             return None
 
         # Update the tickers
-
         for ticker in tickers:
             logging.info(f"Start for {ticker}")
             await self.handle_is_data(ticker, source=source)
-            # Always mark as succeed, even if failed
             logging.info(f"Done for {ticker}")
-            if source == "yfinance":
+            if source == DataSource.YFINANCE:
                 await asyncio.sleep(2)
             else:
                 await asyncio.sleep(10)

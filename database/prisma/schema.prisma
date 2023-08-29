@@ -112,10 +112,9 @@ model Report {
 
 model Loggings {
   id        String   @id @default(uuid())
-  date      DateTime
-  category  String // kline, fundamentals, earning_call
+  timestamp DateTime @default(now())
+  category  String
   data      Json?
-  createdAt DateTime @default(now())
 
   @@index([category])
 }
