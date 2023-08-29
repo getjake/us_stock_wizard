@@ -13,7 +13,7 @@ async def main():
         return
     rsc = RelativeStrengthCalculator()
     await rsc.initialize()
-    await rsc.export_high_rs(days_ago=60, threshold=80, lasting=10)
+    await rsc.export_high_rs(days_ago=60, threshold=90, lasting=10)
     logging.warning("Done for Calc matching RS.")
 
 
