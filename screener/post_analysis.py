@@ -48,6 +48,7 @@ class PostAnalysis:
         await self.analyze_stage2()
         await self.analyze_stage2_diff()
         await self.analyze_stage2_high_rs()
+        await self.analyze_stage2_rs_newborn()
         await self.analyze_ipo()
 
         # Create excel file to tempdir
@@ -235,6 +236,37 @@ class PostAnalysis:
         await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
 
         self.to_save["stage2_high_rs"] = stage2_high_rs
+        return
+
+    async def analyze_stage2_rs_newborn(self) -> None:
+        """
+        Analyze stage2 new-born high RS stocks
+        """
+        # New-born High RS stock list
+        _ = await StockDbUtils.read_first(
+            DbTable.REPORT,
+            where={"kind": "newborn_rs"},
+        )
+        if not _:
+            logging.warning("No newborn_rs data. Skip.")
+            return
+        high_rs: List[str] = _["data"]
+        if not high_rs:
+            logging.warning("No new-born high_rs data in list. Skip.")
+            return
+
+        stage2 = self.to_save["stage2"]
+        stage2_nb_highrs = stage2[stage2["ticker"].isin(high_rs)]
+
+        _high_rs = stage2_nb_highrs["ticker"].tolist()
+        _ = {
+            "date": pd.to_datetime(self.date),
+            "kind": "PostAnalysis_stage2_nb_high_rs",
+            "data": Json(_high_rs),
+        }
+        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
+
+        self.to_save["stage2_newborn_high_rs"] = stage2_nb_highrs
         return
 
     async def analyze_ipo(self) -> None:
