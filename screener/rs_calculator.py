@@ -230,3 +230,43 @@ class RelativeStrengthCalculator:
         }
         await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
         logging.warning(f"High RS stocks count: {len(results)}")
+
+    async def export_new_born(self) -> None:
+        """
+        Export new-born high RS stocks
+
+        The Fixed Crets:
+        - The recent 5 trading days has mean RS > 90
+        - The recent 100-20 trading days has mean RS < 85
+        """
+        # Params
+        _most_recent_days = 5
+        _min_days = 20
+        _max_days = 100
+
+        results: List[str] = []
+        for ticker in self.stocks:
+            rs_data = await StockDbUtils.read(
+                DbTable.RELATIVE_STRENGTH, where={"ticker": ticker}, output="df"
+            )
+            if rs_data.shape[0] <= _max_days:
+                continue
+
+            rs_data.sort_values(by=["date"], inplace=True)
+            most_recent_rs: float = rs_data[-_most_recent_days:]["rscore"].mean()
+            if most_recent_rs < 90:
+                continue
+            faraway_rs: float = rs_data[-_max_days:-_min_days]["rscore"].mean()
+            if faraway_rs < 85:
+                continue
+            results.append(ticker)
+
+        # Export to database
+
+        _ = {
+            "date": pd.to_datetime(datetime.date.today()),
+            "kind": "newborn_rs",
+            "data": Json(results),
+        }
+        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
+        logging.warning(f"Newborn RS stocks count: {len(results)}")
