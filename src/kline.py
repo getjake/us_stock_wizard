@@ -7,7 +7,7 @@ import asyncio
 import logging
 from datetime import datetime
 from time import sleep
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Tuple
 import httpx
 import pandas as pd
 import asyncify
@@ -39,15 +39,7 @@ class KlineFetch:
         Only get the tickers that need to be updated
         """
         tickers_df = await StockCommon.get_stock_list({"delisted": False}, format="df")
-        tickers_df["fundamentalsUpdatedAt"] = pd.to_datetime(
-            tickers_df["fundamentalsUpdatedAt"]
-        ).dt.date
-        df_to_update = tickers_df[
-            tickers_df["fundamentalsUpdatedAt"] < datetime.today().date()
-        ]
-        df_null = tickers_df[tickers_df["fundamentalsUpdatedAt"].isna()]
-        df_joint = pd.concat([df_null, df_to_update])
-        tickers = df_joint["ticker"].tolist()
+        tickers = tickers_df["ticker"].tolist()
         tickers = sorted(tickers)
         tickers = [x for x in tickers if "/" not in x]
         if not tickers:
@@ -349,3 +341,105 @@ class KlineFetch:
                 except Exception as e:
                     logging.error(f"Error in {pair}: {e}")
                     continue
+
+    async def get_abnormal_tickers(self, days_ago: int = 10) -> List[str]:
+        """
+        Get those tickers which has the missing values of OHLC on any dates.
+
+        Args:
+        - days_ago: The number of trading days to check.
+        """
+
+        all_tickers = await self.get_all_tickers()
+        all_tickers = set(all_tickers)
+        today = pd.Timestamp.today()
+        _ = await StockDbUtils.read(
+            DbTable.TRADING_CALENDAR, where={"date": {"lte": today}}, output="df"
+        )
+        days_to_check: List[pd.Timestamp] = (
+            _.sort_values("date", ascending=False).head(days_ago)["date"].to_list()
+        )
+
+        abnormal_tickers: Set[str] = set()
+        for day in days_to_check:
+            _data = await StockDbUtils.read(
+                DbTable.DAILY_KLINE, where={"date": day}, output="df"
+            )
+            existed_tickers: Set[str] = set(_data["ticker"].unique().tolist())
+            abnormal_tickers = abnormal_tickers.union(all_tickers - existed_tickers)
+
+        return sorted(list(abnormal_tickers))
+
+    async def refetch_ticker(self, ticker: str) -> bool:
+        """
+        Refetch Ticker and insert to database
+        """
+        _data = await self.get_ticker(ticker, cache=False)
+        if _data.empty:
+            logging.error(f"No data found for {ticker}")
+            return False
+        _data.reset_index(inplace=True)
+        _data = _data.rename(
+            columns={
+                "Open": "open",
+                "High": "high",
+                "Low": "low",
+                "Close": "close",
+                "Adj Close": "adjClose",
+                "Volume": "volume",
+                "Date": "date",
+            }
+        )
+        _data["volume"] = _data["volume"].astype(int)
+        _data["ticker"] = ticker
+        _data["date"] = pd.to_datetime(_data["date"])
+
+        # Check delisted
+        last_date = _data.iloc[-1]["date"]
+        today = datetime.today()
+        if today - last_date > pd.Timedelta(days=15):  # delisted
+            logging.info(f"{ticker} is delisted?! Please check.")
+            await StockDbUtils.update(
+                DbTable.TICKERS, {"ticker": ticker}, {"delisted": True}
+            )
+            return False
+
+        data_list = _data.to_dict("records")
+        # Delete old records first
+        await StockDbUtils.delete(DbTable.DAILY_KLINE, {"ticker": ticker})
+        await StockDbUtils.insert(DbTable.DAILY_KLINE, data_list)
+        return True
+
+    async def refetch_abnormal_tickers(self) -> Tuple[int, int]:
+        """
+        Refetch the abnormal tickers
+        """
+
+        abnormal_tickers = await self.get_abnormal_tickers()
+        if not abnormal_tickers:
+            logging.warning("No abnormal tickers found. So skip.")
+            return True
+
+        # Refetch the abnormal tickers
+        abnormal_tickers = sorted(list(abnormal_tickers))
+        logging.warning(
+            f"Abnormal tickers: {len(abnormal_tickers)}, Going to re-fetch them."
+        )
+        count = 0
+        succ_count = 0
+        fail_count = 0
+        for ticker in abnormal_tickers:
+            count += 1
+            logging.warning(
+                f"Refetching the {count} / {len(abnormal_tickers)} - {ticker}"
+            )
+            _ = await self.refetch_ticker(ticker)
+            if _:  # Success
+                succ_count += 1
+                logging.warning(f"Refetching {ticker} Succ!.")
+            else:
+                fail_count += 1
+                logging.warning(f"Refetching {ticker} Fail!.")
+
+        logging.warning(f"Refetching done. Success: {succ_count}, Fail: {fail_count}")
+        return succ_count, fail_count
