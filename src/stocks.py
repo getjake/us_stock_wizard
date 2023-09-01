@@ -100,6 +100,12 @@ class StockTickers:
         _data = _data[~_data["ticker"].str.contains("^")]
         _data = _data[~_data["industry"].str.contains("Blank Checks")]
 
+        # Filter out tickers with length != 5 and ends with W
+        _ = _data[_data["ticker"].str.len() == 5]
+        _ = _[_["ticker"].str.endswith("W")]
+        blacklist = _["ticker"].to_list()
+        _data = _data[~_data["ticker"].isin(blacklist)]
+
         _data = _data[columns.values()]
         all_results = _data.to_dict(orient="records")
         # insert into database
