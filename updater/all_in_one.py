@@ -48,12 +48,20 @@ async def check_trading_day() -> bool:
 async def get_tickers():
     st = StockTickers()
     await st.handle_all_tickers()
+    await StockDbUtils.create_logging(
+        DbTable.TICKERS, success=True, msg="Daily Routine Download Tickers Success"
+    )
     logging.info("Done Ticker")
 
 
 async def get_calendar():
     tc = TradingCalendar()
     await tc.handle_calendar()
+    await StockDbUtils.create_logging(
+        DbTable.TRADING_CALENDAR,
+        success=True,
+        msg="Daily Routine Download Trading Calendar Success",
+    )
     logging.info("Done Calendar")
 
 
@@ -61,6 +69,11 @@ async def get_earning_call_fundamentals():
     fundamentals = Fundamentals()
     await fundamentals.handle_earning_call_data()
     await fundamentals.update_is_data(days_ago=5)
+    await StockDbUtils.create_logging(
+        DbTable.FUNDAMENTALS,
+        success=True,
+        msg="Daily Routine Download Earning Call and Fundamental Success",
+    )
     logging.info("Done Earning Call and Fundamental")
 
 
@@ -68,6 +81,11 @@ async def get_kline():
     kf = KlineFetch()
     await kf.initialize()
     await kf.update_all_tickers()
+    await StockDbUtils.create_logging(
+        DbTable.DAILY_KLINE,
+        success=True,
+        msg="Daily Routine Download Kline Success",
+    )
     logging.info("Done Kline")
 
 
@@ -75,6 +93,11 @@ async def get_rs():
     rs = RelativeStrengthCalculator()
     await rs.initialize()
     await rs.update_all_rs()
+    await StockDbUtils.create_logging(
+        DbTable.RELATIVE_STRENGTH,
+        success=True,
+        msg="Daily Routine Download RS Success",
+    )
 
 
 async def screen():
@@ -82,6 +105,11 @@ async def screen():
     await ds.initialize()
     await ds.screen_all()
     await ds.save()
+    await StockDbUtils.create_logging(
+        DbTable.DAILY_SCREENING,
+        success=True,
+        msg="Daily Routine Download Screening Success",
+    )
     logging.info("Done Screening")
 
 
@@ -90,6 +118,11 @@ async def screen_ipo():
     await screener.initialize()
     await screener.screen_all()
     await screener.save()
+    await StockDbUtils.create_logging(
+        DbTable.IPO_SCREENING,
+        success=True,
+        msg="Daily Routine Download IPO Screening Success",
+    )
     logging.info("Done IPO Screening")
 
 
@@ -99,11 +132,21 @@ async def get_naa200r():
     await naa200r.analyze_all()
     await naa200r.save()
     await naa200r.export_image()
+    await StockDbUtils.create_logging(
+        DbTable.NAA200R,
+        success=True,
+        msg="Daily Routine Download NAA200R Success",
+    )
 
 
 async def run_post_analysis():
     pa = PostAnalysis()
     await pa.analyze_all()
+    await StockDbUtils.create_logging(
+        "DailyPostAnalysis",
+        success=True,
+        msg="Daily Routine Download Post Analysis Success",
+    )
 
 
 async def main():

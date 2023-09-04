@@ -107,7 +107,7 @@ class Fundamentals:
 
         return _
 
-    def get_is_data(self, stock: str, source: str = DataSource.ALPHA_VANTAGE) -> dict:
+    def get_is_data(self, stock: str, source: str = DataSource.YFINANCE) -> dict:
         """
         Get data from income statement
 
@@ -206,7 +206,7 @@ class Fundamentals:
         return _data.to_dict(orient="records")
 
     async def handle_is_data(
-        self, stock: str, source: str = DataSource.ALPHA_VANTAGE
+        self, stock: str, source: str = DataSource.YFINANCE
     ) -> bool:
         """
         Process the Income Statement data, and save it into the database
@@ -252,7 +252,7 @@ class Fundamentals:
         )
         return True
 
-    async def handle_all_is_data(self, source: str = DataSource.ALPHA_VANTAGE) -> None:
+    async def handle_all_is_data(self, source: str = DataSource.YFINANCE) -> None:
         """
         Process the Income Statement data for all tickers, including those non-updated and updated.
         """
@@ -278,7 +278,7 @@ class Fundamentals:
         return await self.update_tickers_data(all_list, source=source)
 
     async def update_expired_data(
-        self, days_ago: int = 5, source: str = DataSource.ALPHA_VANTAGE
+        self, days_ago: int = 5, source: str = DataSource.YFINANCE
     ) -> None:
         """
         Update the expired data.
@@ -297,26 +297,37 @@ class Fundamentals:
         return await self.update_tickers_data(tickers, source=source)
 
     async def update_tickers_data(
-        self, tickers: List[str], source: str = DataSource.ALPHA_VANTAGE
+        self, tickers: List[str], source: str = DataSource.YFINANCE
     ) -> None:
         """
         Update IS data for the given tickers
         """
-
+        succ_count = 0
+        fail_count = 0
+        failed_tickers = []
         for ticker in tickers:
             logging.info(f"Fundamental Start for {ticker}")
             succ = await self.handle_is_data(ticker, source=source)
             if succ:
                 logging.info(f"Fundamental Done for {ticker}")
+                succ_count += 1
             else:
                 logging.error(f"Fundamental Failed for {ticker}")
+                failed_tickers.append(ticker)
+                fail_count += 1
             if source == DataSource.YFINANCE:
                 await asyncio.sleep(2)
             else:
                 await asyncio.sleep(10)
+        # Log
+        await StockDbUtils.create_logging(
+            DbTable.FUNDAMENTALS,
+            success=True,
+            msg=f"Fundamental Success: {succ_count}, Failed: {fail_count}, failed_tickers: {failed_tickers}",
+        )
 
     async def update_is_data(
-        self, days_ago: int = 7, source: str = DataSource.ALPHA_VANTAGE
+        self, days_ago: int = 7, source: str = DataSource.YFINANCE
     ) -> None:
         """
         Update the Income Statement data for tickers which has the earning call less than __ days.

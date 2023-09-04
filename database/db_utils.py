@@ -1,6 +1,6 @@
 import datetime
 from typing import List, Optional
-from prisma import Prisma
+from prisma import Prisma, Json
 import pandas as pd
 
 
@@ -121,6 +121,18 @@ class StockDbUtils:
         await db.connect()
         _target = getattr(db, table.lower())
         result = await _target.delete_many(where=where)
+        await db.disconnect()
+        return result
+
+    @staticmethod
+    async def create_logging(table: DbTable, success: bool, msg: str):
+        """
+        Create a logging entry
+        """
+        db = Prisma()
+        await db.connect()
+        _ = {"category": table, "data": Json({"success": success, "msg": msg})}
+        result = await db.loggings.create(_)
         await db.disconnect()
         return result
 
