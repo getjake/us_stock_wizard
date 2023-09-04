@@ -95,6 +95,7 @@ class StockTickers:
         _data["market"] = market
 
         # Filter out conditions
+        _data = _data[~_data["ticker"].str.contains("/")]
         _data = _data[~_data["name"].str.contains("Acquisition")]
         _data = _data[~_data["name"].str.contains("acquisition")]
         _data = _data[~_data["ticker"].str.contains("^")]

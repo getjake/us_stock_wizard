@@ -88,9 +88,7 @@ class RelativeStrengthCalculator:
         result = kline[[ticker]]
         return result
 
-    async def batch_get_all_rs(
-        self, start: datetime.date, end: datetime.date
-    ) -> pd.DataFrame:
+    async def batch_get_all_rs(self, start: datetime.date, end: datetime.date) -> None:
         """
         Get RS of all stocks in a date range
         """
