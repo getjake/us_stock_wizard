@@ -211,46 +211,60 @@ class Fundamentals:
         """
         Process the Income Statement data, and save it into the database
         """
-        data = self.get_is_data(stock, source=source)
-        if not data:  # Maybe info not exist for the ticker.
-            logging.error("No data found for %s", stock)
+        try:
+            data = self.get_is_data(stock, source=source)
+            if not data:  # Maybe info not exist for the ticker.
+                logging.error("No data found for %s", stock)
+                await StockDbUtils.update(
+                    DbTable.TICKERS,
+                    {"ticker": stock},
+                    {"fundamentalsUpdatedAt": None},  # Remove the updated time
+                )
+                return False
+            quarterly_reports: dict = data.get("quarterlyReports")
+            annaul_reports: dict = data.get("annualReports")
+            if not quarterly_reports and not annaul_reports:
+                logging.error("No data found for %s", stock)
+                await StockDbUtils.update(
+                    DbTable.TICKERS,
+                    {"ticker": stock},
+                    {"fundamentalsUpdatedAt": None},  # Remove the updated time
+                )
+                return False
+
+            if quarterly_reports:
+                _quarterly_reports = self._process_report(
+                    ticker=stock,
+                    data=quarterly_reports,
+                    report_type=ReportType.QUARTERLY,
+                )
+                await StockDbUtils.insert(
+                    table=DbTable.FUNDAMENTALS, data=_quarterly_reports
+                )
+            if annaul_reports:
+                _annual_report = self._process_report(
+                    ticker=stock, data=annaul_reports, report_type=ReportType.ANNUAL
+                )
+                await StockDbUtils.insert(
+                    table=DbTable.FUNDAMENTALS, data=_annual_report
+                )
+
+            logging.warning(f"Fundamental Successfully updated for {stock}")
+            await StockDbUtils.update(
+                DbTable.TICKERS,
+                {"ticker": stock},
+                {"fundamentalsUpdatedAt": datetime.now()},
+            )
+            return True
+
+        except Exception as e:
+            logging.error(f"Failed to update fundamental data for {stock}, {e}")
             await StockDbUtils.update(
                 DbTable.TICKERS,
                 {"ticker": stock},
                 {"fundamentalsUpdatedAt": None},  # Remove the updated time
             )
             return False
-        quarterly_reports: dict = data.get("quarterlyReports")
-        annaul_reports: dict = data.get("annualReports")
-        if not quarterly_reports and not annaul_reports:
-            logging.error("No data found for %s", stock)
-            await StockDbUtils.update(
-                DbTable.TICKERS,
-                {"ticker": stock},
-                {"fundamentalsUpdatedAt": None},  # Remove the updated time
-            )
-            return False
-
-        if quarterly_reports:
-            _quarterly_reports = self._process_report(
-                ticker=stock, data=quarterly_reports, report_type=ReportType.QUARTERLY
-            )
-            await StockDbUtils.insert(
-                table=DbTable.FUNDAMENTALS, data=_quarterly_reports
-            )
-        if annaul_reports:
-            _annual_report = self._process_report(
-                ticker=stock, data=annaul_reports, report_type=ReportType.ANNUAL
-            )
-            await StockDbUtils.insert(table=DbTable.FUNDAMENTALS, data=_annual_report)
-
-        logging.warning(f"Fundamental Successfully updated for {stock}")
-        await StockDbUtils.update(
-            DbTable.TICKERS,
-            {"ticker": stock},
-            {"fundamentalsUpdatedAt": datetime.now()},
-        )
-        return True
 
     async def handle_all_is_data(self, source: str = DataSource.YFINANCE) -> None:
         """
