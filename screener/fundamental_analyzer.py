@@ -86,16 +86,20 @@ class FundamentalAnalyzer:
         1. Sales YoY growth rate > 20%
         2. netIncome YoY growth rate > 20%
         """
-        data = self.analyze()
-        if data.empty:
-            logging.warning("No fundamental data found")
+        try:
+            data = self.analyze()
+            if data.empty:
+                logging.warning("No fundamental data found")
+                return False
+
+            sales_yoy = data.iloc[-1]["sales_YoY"] > 0.2
+            netIncome_yoy = data.iloc[-1]["netIncome_YoY"] > 0.2
+
+            _ = sales_yoy and netIncome_yoy
+            return _
+        except Exception as e:
+            logging.error(e)
             return False
-
-        sales_yoy = data.iloc[-1]["sales_YoY"] > 0.2
-        netIncome_yoy = data.iloc[-1]["netIncome_YoY"] > 0.2
-
-        _ = sales_yoy and netIncome_yoy
-        return _
 
 
 class FundamentalScreener:
