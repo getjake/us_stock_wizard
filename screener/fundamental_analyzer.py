@@ -24,7 +24,7 @@ class FundamentalAnalyzer:
     def __init__(self, ticker: str) -> None:
         self.ticker = ticker
         self.db_utils = StockDbUtils()
-        self.data: Optional[pd.DataFrame] = None
+        self.data: Optional[pd.DataFrame] = pd.DataFrame()
 
     async def get_fundamental(self) -> None:
         """
@@ -39,10 +39,11 @@ class FundamentalAnalyzer:
         """
         Analyze fundamental data
         """
-        if self.data is None:
+        if self.data.empty:
             logging.info("No fundamental data found")
             return
         fundamental = self.data.copy()
+
         # Handle Quarterly Report only
         fundamental["reportDate"] = pd.to_datetime(fundamental["reportDate"])
         fundamental = fundamental[fundamental["reportType"] == "QUARTERLY"]
@@ -68,12 +69,13 @@ class FundamentalAnalyzer:
         """
         Get result of fundamental analysis
         """
-        if self.data is None:
+        if self.data.empty:
             return False
         combined_bool = []
         for cret in criteria:
             if cret == FundamentalMeasurements.CRITERIA_1:
-                combined_bool.append(self.cret_1())
+                _ = self.cret_1()
+                combined_bool.append(_)
             else:
                 raise ValueError(f"Unknown criteria: {cret}")
         return all(combined_bool)
@@ -140,7 +142,7 @@ class FundamentalScreener:
 
     def filter_preferred(self) -> List[str]:
         """
-        Return the preferred stocks
+        Return the preferred stock list
         """
         if self.stocks_df.empty:
             raise ValueError("No stocks in the dataframe!")
@@ -154,7 +156,7 @@ class FundamentalScreener:
 
     def filter_blacklist(self) -> List[str]:
         """
-        Return the blacklist stocks
+        Return the blacklist stock list
         """
         if self.stocks_df.empty:
             raise ValueError("No stocks in the dataframe!")
@@ -165,3 +167,23 @@ class FundamentalScreener:
         df["contains_blacklist"] = df["joint_kw"].str.contains(pattern)
         df = df[df["contains_blacklist"] == True]
         return df["ticker"].tolist()
+
+    async def filter_fundamentals(
+        self,
+        crets: List[FundamentalMeasurements] = [FundamentalMeasurements.CRITERIA_1],
+    ) -> List[str]:
+        """
+        Filter stocks based on fundamental analysis
+        """
+        if self.stocks_df.empty:
+            raise ValueError("No stocks in the dataframe!")
+        df = self.stocks_df.copy()
+        tickers = df["ticker"].tolist()
+        res = []
+        for ticker in tickers[:20]:
+            analyzer = FundamentalAnalyzer(ticker=ticker)
+            await analyzer.get_fundamental()
+            _ = analyzer.get_result(crets)
+            if _:
+                res.append(ticker)
+        return res
