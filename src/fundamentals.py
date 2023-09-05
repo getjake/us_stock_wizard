@@ -299,6 +299,8 @@ class Fundamentals:
             _ = not_null_list
         else:
             _ = all_list
+
+        logging.warning(f"Total tickers to update fundamentals: {len(_)}")
         return await self.update_tickers_data(_, source=source)
 
     async def update_expired_data(
