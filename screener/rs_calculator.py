@@ -169,6 +169,9 @@ class RelativeStrengthCalculator:
         """ """
         if not date:
             date = pd.Timestamp.today().date()
+        await self.batch_get_all_rs(date, date)
+        return True
+
         rs_list = []
         for ticker in self.stocks:
             rs = await self.get_rs(ticker, date)
