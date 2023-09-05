@@ -74,6 +74,9 @@ class Fundamentals:
         """
         _data = data.T
         _data = _data.fillna(0)
+        # Handle Gross Profit Missing issue - yfinance
+        if "Gross Profit" not in _data.columns:
+            _data["Gross Profit"] = 0
         _data = _data[["Net Income", "Total Revenue", "Gross Profit"]]
         # Convert `"Net Income"` to int
         _data["Net Income"] = _data["Net Income"].astype(float).astype(int)
