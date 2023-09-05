@@ -73,6 +73,7 @@ class Fundamentals:
         Process yfinance data to the format of alphavantage
         """
         _data = data.T
+        _data = _data.fillna(0)
         _data = _data[["Net Income", "Total Revenue", "Gross Profit"]]
         # Convert `"Net Income"` to int
         _data["Net Income"] = _data["Net Income"].astype(float).astype(int)
@@ -98,7 +99,6 @@ class Fundamentals:
         ticker = yf.Ticker(stock)
         quarterly_data = ticker.quarterly_income_stmt
         annual_data = ticker.income_stmt
-
         _ = {
             "symbol": stock,
             "annualReports": self._process_yfinance_data(annual_data),
@@ -191,8 +191,6 @@ class Fundamentals:
         _data = _data.replace(np.inf, 0)
         _data = _data.replace(np.nan, 0)
 
-        # Rename
-
         _data = _data.rename(
             columns={
                 "fiscalDateEnding": "reportDate",
@@ -266,9 +264,15 @@ class Fundamentals:
             )
             return False
 
-    async def handle_all_is_data(self, source: str = DataSource.YFINANCE) -> None:
+    async def handle_all_is_data(
+        self, filter: str = "all", source: str = DataSource.YFINANCE
+    ) -> None:
         """
         Process the Income Statement data for all tickers, including those non-updated and updated.
+
+        Args:
+            filter: The filter for the tickers, either `all`, `null`, `not_null`
+
         """
         all_tickers: pd.DataFrame = await StockCommon.get_stock_list(format="df")
 
@@ -289,7 +293,13 @@ class Fundamentals:
         np.random.shuffle(null_list)
 
         all_list = null_list + not_null_list
-        return await self.update_tickers_data(all_list, source=source)
+        if filter == "null":
+            _ = null_list
+        elif filter == "not_null":
+            _ = not_null_list
+        else:
+            _ = all_list
+        return await self.update_tickers_data(_, source=source)
 
     async def update_expired_data(
         self, days_ago: int = 5, source: str = DataSource.YFINANCE
