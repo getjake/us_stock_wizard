@@ -106,7 +106,7 @@ async def screen():
     await ds.screen_all()
     await ds.save()
     await StockDbUtils.create_logging(
-        DbTable.DAILY_SCREENING,
+        "DailyScreening",
         success=True,
         msg="Daily Routine Download Screening Success",
     )
@@ -119,7 +119,7 @@ async def screen_ipo():
     await screener.screen_all()
     await screener.save()
     await StockDbUtils.create_logging(
-        DbTable.IPO_SCREENING,
+        "DailyIPOScreening",
         success=True,
         msg="Daily Routine Download IPO Screening Success",
     )
