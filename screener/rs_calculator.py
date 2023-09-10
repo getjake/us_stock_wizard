@@ -172,27 +172,6 @@ class RelativeStrengthCalculator:
         await self.batch_get_all_rs(date, date)
         return True
 
-        rs_list = []
-        for ticker in self.stocks:
-            rs = await self.get_rs(ticker, date)
-            if rs:
-                rs_list.append({"ticker": ticker, "rs": rs})
-        rs_df = pd.DataFrame(rs_list)
-        rs_df["rank"] = rs_df["rs"].rank(ascending=True)
-        rs_df["rscore"] = rs_df["rank"] / len(rs_df["rank"]) * 100
-        rs_df["rscore"] = rs_df["rscore"].astype(int)
-        rs_df["date"] = pd.Timestamp(date)
-        rs_df = rs_df[["date", "rscore", "ticker"]]
-        if not rs_df.empty:
-            await StockDbUtils.insert(
-                DbTable.RELATIVE_STRENGTH, rs_df.to_dict(orient="records")
-            )
-            logging.warning(f"RS Calc Done for {date}")
-            return True
-
-        logging.warning(f"No data for {date}")
-        return False
-
     async def export_high_rs(
         self, days_ago: int = 90, threshold: int = 80, lasting: int = 10
     ) -> None:
