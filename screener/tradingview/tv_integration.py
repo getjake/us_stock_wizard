@@ -12,7 +12,6 @@ from typing import List, Dict
 import pyperclip
 from us_stock_wizard import StockRootDirectory
 from us_stock_wizard.src.common import NetworkRequests
-from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 
 
 class DataSource:
@@ -61,6 +60,8 @@ class TradingViewIntegration:
             self.host = StockRootDirectory().env().get("API_HOST")
 
     async def _get_data_from_db(self, kind: str) -> List[str]:
+        from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
+
         data = await StockDbUtils.read(table=DbTable.REPORT, output="df")
         tickers = await StockDbUtils.read(table=DbTable.TICKERS, output="df")
         data = data[data["kind"] == kind]
