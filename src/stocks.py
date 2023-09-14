@@ -96,6 +96,7 @@ class StockTickers:
         _data = _data[~_data["ticker"].str.contains("/")]
         _data = _data[~_data["name"].str.contains("Acquisition")]
         _data = _data[~_data["name"].str.contains("acquisition")]
+        _data = _data[~_data["name"].str.contains("%")] # Mostly Notes / Funds
         _data = _data[~_data["ticker"].str.contains("^")]
         _data = _data[~_data["industry"].str.contains("Blank Checks")]
 
