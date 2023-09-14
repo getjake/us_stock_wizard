@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 from prisma import Prisma, Json
 import pandas as pd
 
@@ -125,7 +125,7 @@ class StockDbUtils:
         return result
 
     @staticmethod
-    async def create_logging(table: DbTable, success: bool, msg: str):
+    async def create_logging(table: Union[str, DbTable], success: bool, msg: str):
         """
         Create a logging entry
         """

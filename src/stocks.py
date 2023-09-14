@@ -1,8 +1,6 @@
 import logging
 import asyncio
-from enum import Enum
 from typing import List, Optional
-from dotenv import load_dotenv
 import httpx
 import yfinance as yf
 import pandas as pd
@@ -109,7 +107,7 @@ class StockTickers:
 
         _data = _data[columns.values()]
         all_results = _data.to_dict(orient="records")
-        # insert into database
+        # Save to database
         await StockDbUtils.insert(table=DbTable.TICKERS, data=all_results)
         logging.info(f"Done for {market}")
 
@@ -117,6 +115,52 @@ class StockTickers:
         self.get_all_tickers()
         await self._handle_tickers(market=StockMarket.NASDAQ)
         await self._handle_tickers(market=StockMarket.NYSE)
+
+    async def update_blank_fields(self) -> None:
+        """
+        Update those blank `sector` and `industry` fields from yfinance
+        """
+        data = await StockDbUtils.read(table=DbTable.TICKERS, output="df")
+        data = data[(data["sector"] == "") | (data["industry"] == "")]
+        if data.empty:
+            logging.info("No blank fields found")
+            return
+
+        succ_count = 0
+        fail_count = 0
+        for index, row in data.iterrows():
+            ticker = row["ticker"]
+            print(f"Processing {ticker}")
+            try:
+                ticker_data = yf.Ticker(ticker).info
+                sector = ticker_data.get("sector", "")
+                industry = ticker_data.get("industry", "")
+                if not sector and not industry:
+                    continue
+                logging.info(
+                    f"Updating {ticker} with sector {sector} and industry {industry}"
+                )
+                await StockDbUtils.update(
+                    DbTable.TICKERS,
+                    {"ticker": ticker},
+                    {"sector": sector, "industry": industry},
+                )
+                succ_count += 1
+                logging.info(
+                    f"Updated {ticker} with sector {sector} and industry {industry}"
+                )
+            except Exception as e:
+                logging.error(e)
+                fail_count += 1
+                continue
+
+            asyncio.sleep(2)
+
+        await StockDbUtils.create_logging(
+            "YFinanceSectorIndUpdate",
+            True,
+            f"Updated {succ_count} tickers, failed {fail_count} tickers",
+        )
 
 
 class StockDividends:
