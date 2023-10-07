@@ -48,6 +48,8 @@ class IpoScreener:
         kline = await StockDbUtils.read(
             DbTable.DAILY_KLINE, where={"ticker": ticker}, output="df"
         )
+        if kline.empty:
+            return pd.DataFrame()
         kline["date"] = pd.to_datetime(kline["date"]).dt.date
         return kline
 
@@ -87,6 +89,7 @@ class IpoScreener:
         succ_tickers = []
         for ticker in self.stocks_df["ticker"]:
             _ = await self.screen(ticker=ticker)
+            logging.warning(f"Screening >>> {ticker} <<< Now!")
             if _:
                 succ_tickers.append(ticker)
                 logging.warning(f"{ticker} passed")
@@ -102,7 +105,7 @@ class IpoScreener:
         if not self.succ_tickers:
             logging.warning("No succ. tickers found, skip saving")
             return
-
+            
         _ = {
             "date": pd.to_datetime(datetime.date.today()),
             "kind": "ipo",
