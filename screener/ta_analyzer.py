@@ -130,7 +130,8 @@ class TaAnalyzer:
         # 52 week high, low
         kline["rolling_high"] = kline["adjClose"].rolling(250).max()
         kline["rolling_low"] = kline["adjClose"].rolling(250).min()
-
+        # Average volume
+        _avg_vol = kline["volume"].rolling(20).mean()
         # Conditions
         latest = kline.iloc[-1]
         c_1 = latest["adjClose"] > latest["ma150"]
@@ -147,8 +148,7 @@ class TaAnalyzer:
         c_8 = latest["adjClose"] > latest["ma50"]
         c_9 = latest["adjClose"] >= 5  # 5 USD
 
-        # Volume in USD
-        c_10 = latest["adjClose"] * latest["volume"] >= 200000  # 200k USD Volume
+        c_10 = _avg_vol >= 25000  # 25000 Share Volume at least
 
         # c_11 - No more than 30% of the MA50 - Miss the powerplay
         # c_11 = latest["adjClose"] <= latest["ma50"] * 1.3
