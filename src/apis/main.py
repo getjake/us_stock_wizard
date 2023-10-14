@@ -12,6 +12,9 @@ from us_stock_wizard.src.plot import StockPlot
 
 app = FastAPI()
 
+# Cache -> Ticker -> Market:Ticker
+tickers_mapping: dict = {}
+
 
 @app.get("/")
 async def root() -> dict:
@@ -26,23 +29,31 @@ async def get_latest_report(kind: str) -> Optional[List[str]]:
     Example:
     kind: PostAnalysis_stage2
     """
+    global tickers_mapping
+    if not tickers_mapping:
+        await get_tickers()
     data = await StockDbUtils.read(table=DbTable.REPORT, output="df")
     data = data[data["kind"] == kind]
-    latest_data = data.iloc[-1]["data"]
-    return latest_data
+    latest_data: List[str] = data.iloc[-1]["data"]
+    _ = [tickers_mapping.get(ticker, ticker) for ticker in latest_data]
+    return _
 
 
 @app.get("/api/tickers")
-async def get_tickers() -> Optional[List[str]]:
+async def get_tickers() -> Optional[dict]:
     """
     Get all tickers in the NYSE and NASDAQ
     """
+    global tickers_mapping
     tickers = await StockDbUtils.read(table=DbTable.TICKERS, output="df")
     if tickers.empty:
         return []
     tickers["market_ticker"] = tickers["market"] + ":" + tickers["ticker"]
-    ticker_exported = tickers["market_ticker"].tolist()
-    return ticker_exported
+    tickers.set_index("ticker", inplace=True)
+    tickers = tickers[["market_ticker"]]
+    _exported = tickers["market_ticker"].to_dict()
+    tickers_mapping = _exported
+    return _exported
 
 
 @app.get("/plot/{ticker}", response_class=HTMLResponse)
