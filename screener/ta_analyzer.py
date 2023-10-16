@@ -117,7 +117,7 @@ class TaAnalyzer:
         6. Stock price is within 25% of 52-week high.
         7. RS (relative strength) is above 70.
         8. Current price is above MA50.
-        9. Stock Price > 10
+        9. Stock Price > 5 USD
         10. Daily Volume USD > 200k USD
         11. Current close no more than 30% of the MA50
         12. Max Drawdown no more than 35% in the recent 90 trading days.
@@ -130,7 +130,8 @@ class TaAnalyzer:
         # 52 week high, low
         kline["rolling_high"] = kline["adjClose"].rolling(250).max()
         kline["rolling_low"] = kline["adjClose"].rolling(250).min()
-
+        # Average volume
+        _avg_vol = int(kline["volume"].tail(20).mean())
         # Conditions
         latest = kline.iloc[-1]
         c_1 = latest["adjClose"] > latest["ma150"]
@@ -145,10 +146,8 @@ class TaAnalyzer:
         c_6 = latest["adjClose"] > latest["rolling_high"] * 0.75
         c_7 = self.rs > 70
         c_8 = latest["adjClose"] > latest["ma50"]
-        c_9 = latest["adjClose"] >= 10
-
-        # Volume in USD
-        c_10 = latest["adjClose"] * latest["volume"] >= 200000  # 200k USD Volume
+        c_9 = latest["adjClose"] >= 5  # 5 USD
+        c_10 = _avg_vol >= 25000  # 25000 Share Volume at least
 
         # c_11 - No more than 30% of the MA50 - Miss the powerplay
         # c_11 = latest["adjClose"] <= latest["ma50"] * 1.3

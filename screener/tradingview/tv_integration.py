@@ -81,7 +81,7 @@ class TradingViewIntegration:
 
         url = urllib.parse.urljoin(self.host, f"/api/reports/{kind}")
         print("url is", url)
-        data = NetworkRequests._httpx_get_data(url=url)
+        data = NetworkRequests._httpx_get_data(url=url, timeout=30)
         return data
 
     async def get_data(self, kind: str) -> List[str]:
