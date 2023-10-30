@@ -135,7 +135,8 @@ class TaAnalyzer:
         # Conditions
         latest = kline.iloc[-1]
         c_1 = latest["adjClose"] > latest["ma150"]
-        c_2 = latest["ma150"] > latest["ma200"]
+        # Slightly modified the criteria, making it available for the stock that is pumped recently.
+        c_2 = latest["ma150"] > latest["ma200"] if self.rs < 85 else True
 
         # c_3
         ma200 = kline["ma200"]
