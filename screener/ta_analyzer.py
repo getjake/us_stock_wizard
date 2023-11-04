@@ -22,7 +22,7 @@ class TaMeasurements(Enum):
     MINERVINI_5M = "minervini_5m"
     MINERVINI_1M = "minervini_1m"
     SEVEN_DAY_LOW_VOLATILITY = "seven_day_low_volatility"
-    RECENT_LOW_VOLUME = "RECENT_LOW_VOLUME"
+    RECENT_LOW_VOLUME = "recent_low_volume"
 
     @classmethod
     def list(cls):
@@ -97,6 +97,9 @@ class TaAnalyzer:
                 result[cret] = _
             elif cret == TaMeasurements.SEVEN_DAY_LOW_VOLATILITY.value:
                 _ = self._cret_days_vol(kline, days=7, vol=0.12)
+                result[cret] = _
+            elif cret == TaMeasurements.RECENT_LOW_VOLUME.value:
+                _ = self._cret_recent_low_volume(kline, days=1)
                 result[cret] = _
             else:
                 raise ValueError(f"Unknown criteria: {cret}")
@@ -215,20 +218,23 @@ class TaAnalyzer:
         res = high / low <= 1 + vol
         return res
 
-    def _cret_recent_low_volume(self, _kline: pd.DataFrame, days: int) -> bool:
+    def _cret_recent_low_volume(self, _kline: pd.DataFrame, days: int = 1) -> bool:
         """
         Check recent low volume
         """
         kline = _kline.copy().tail(20)
         if not kline.shape[0] < 20:  # Must have at least 20 days
             return False
-        # Recent 2 days volume
-        latest_avg_volume = kline["volume"].iloc[-2:].mean()
+        # Recent 1 days volume
+        latest_avg_volume = kline["volume"].iloc[-days:].mean()
         last_5d_volume = kline["volume"].iloc[-5:].mean()
         last_10d_volume = kline["volume"].iloc[-10:].mean()
         last_20d_volume = kline["volume"].iloc[-20:].mean()
 
         # Cret 1 - Less than 50% of the average volume
         _c1 = latest_avg_volume < min(last_5d_volume, last_10d_volume, last_20d_volume)
-        # Cret 2 - At least 200,000 Outstanding Shares
-        # @TODO
+        # Cret 2 - At least 200,000 Outstanding Shares - Cannot process, default True
+        _c2 = True
+
+        res = _c1 and _c2
+        return res

@@ -55,7 +55,7 @@ class DailyScreener:
             logging.error(f"Failed to screen stock {ticker}: {e}")
             return {}
 
-    async def screen_all(self) -> List[str]:
+    async def screen_all(self) -> None:
         """
         Screen all stocks and get the succ. tickers.
         """
