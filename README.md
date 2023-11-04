@@ -12,7 +12,7 @@ The goal of this project is to
 
 It include the following features:
 
-- [x] Find all the symbols in the US stock market (NYSE, NASDAQ)
+- [x] Find all the symbols in the US stock market (NYSE, NASDAQ, AMEX)
 - [x] Automatically download fundamental data for all the stocks in the US stock market via Alpha Vantage API.
 - [x] Automatically download daily candlestick chart for all the stocks in the US stock market.
 - [x] Automacatlly calcuate the Relative Strength for all stocks, and calcuate the NAA200R for all stocks in NASDAQ.
