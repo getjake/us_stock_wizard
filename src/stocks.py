@@ -11,6 +11,7 @@ from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 class StockMarket:
     NASDAQ = "NASDAQ"
     NYSE = "NYSE"
+    AMEX = "AMEX"  # aka. NYSE ARCA
 
 
 class StockTickers:
@@ -25,6 +26,8 @@ class StockTickers:
 
     NASDAQ_URL = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=25&exchange=NASDAQ&download=true"
     NYSE_URL = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=25&exchange=NYSE&download=true"
+    AMEX_URL = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=25&exchange=AMEX&download=true"
+
     HEADERS = {
         "authority": "api.nasdaq.com",
         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -51,6 +54,8 @@ class StockTickers:
             url = self.NASDAQ_URL
         elif market == StockMarket.NYSE:
             url = self.NYSE_URL
+        elif market == StockMarket.AMEX:
+            url = self.AMEX_URL
         else:
             raise Exception("Invalid market")
 
@@ -67,6 +72,8 @@ class StockTickers:
         self._nasdaq_tickers = self.get_tickers(market=StockMarket.NASDAQ)
         # NYSE
         self._nyse_tickers = self.get_tickers(market=StockMarket.NYSE)
+        # AMEX
+        self._amex_tickers = self.get_tickers(market=StockMarket.AMEX)
 
     async def _handle_tickers(self, market: StockMarket) -> None:
         """
@@ -76,6 +83,8 @@ class StockTickers:
             data = self._nasdaq_tickers
         elif market == StockMarket.NYSE:
             data = self._nyse_tickers
+        elif market == StockMarket.AMEX:
+            data = self._amex_tickers
         if data is None:
             raise Exception(f"{market} tickers not loaded")
         _data = data.copy()
@@ -96,7 +105,7 @@ class StockTickers:
         _data = _data[~_data["ticker"].str.contains("/")]
         _data = _data[~_data["name"].str.contains("Acquisition")]
         _data = _data[~_data["name"].str.contains("acquisition")]
-        _data = _data[~_data["name"].str.contains("%")] # Mostly Notes / Funds
+        _data = _data[~_data["name"].str.contains("%")]  # Mostly Notes / Funds
         _data = _data[~_data["ticker"].str.contains("^")]
         _data = _data[~_data["industry"].str.contains("Blank Checks")]
 
@@ -116,6 +125,7 @@ class StockTickers:
         self.get_all_tickers()
         await self._handle_tickers(market=StockMarket.NASDAQ)
         await self._handle_tickers(market=StockMarket.NYSE)
+        await self._handle_tickers(market=StockMarket.AMEX)
 
     async def update_blank_fields(self) -> None:
         """
