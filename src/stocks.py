@@ -101,19 +101,16 @@ class StockTickers:
         _data["ipoYear"] = _data["ipoYear"].apply(lambda x: int(x) if x else -1)
         _data["market"] = market
 
-        # Filter out conditions
-        _data = _data[~_data["ticker"].str.contains("/")]
-        _data = _data[~_data["name"].str.contains("Acquisition")]
-        _data = _data[~_data["name"].str.contains("acquisition")]
-        _data = _data[~_data["name"].str.contains("%")]  # Mostly Notes / Funds
-        _data = _data[~_data["ticker"].str.contains("^")]
-        _data = _data[~_data["industry"].str.contains("Blank Checks")]
-
-        # Filter out tickers with length != 5 and ends with W
-        _ = _data[_data["ticker"].str.len() == 5]
-        _ = _[_["ticker"].str.endswith("W")]
-        blacklist = _["ticker"].to_list()
-        _data = _data[~_data["ticker"].isin(blacklist)]
+        # Filer out those tickers with /, ^, %, acquisition, blank checks, 5 digits, W
+        _data = _data[
+            ~_data["ticker"].str.contains("/|\^", regex=True)
+            & ~_data["name"].str.contains(
+                "Acquisition|%|acquisition", case=False, regex=True
+            )
+            & ~_data["industry"].str.contains("Blank Checks", case=False)
+            & ~(_data["ticker"].str.len() == 5)
+            & ~_data["ticker"].str.endswith("W")
+        ]
 
         _data = _data[columns.values()]
         all_results = _data.to_dict(orient="records")
@@ -123,8 +120,8 @@ class StockTickers:
 
     async def handle_all_tickers(self) -> None:
         self.get_all_tickers()
-        await self._handle_tickers(market=StockMarket.NASDAQ)
-        await self._handle_tickers(market=StockMarket.NYSE)
+        # await self._handle_tickers(market=StockMarket.NASDAQ)
+        # await self._handle_tickers(market=StockMarket.NYSE)
         await self._handle_tickers(market=StockMarket.AMEX)
 
     async def update_blank_fields(self) -> None:
