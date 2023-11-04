@@ -48,6 +48,7 @@ class StockTickers:
     def __init__(self) -> None:
         self._nasdaq_tickers: Optional[pd.DataFrame] = None
         self._nyse_tickers: Optional[pd.DataFrame] = None
+        self._amex_tickers: Optional[pd.DataFrame] = None
 
     def get_tickers(self, market: StockMarket) -> pd.DataFrame:
         if market == StockMarket.NASDAQ:
