@@ -14,13 +14,15 @@ class TaMeasurements(Enum):
     Stage 2: Mark's Trend Template for Stage 2
     MINERVINI_5M: MA200 is trending up for at least 5 month
     MINERVINI_1M: MA200 is trending up for at least 1 month
-    SEVEN_DAY_LOW_VOLATILITY: 最近 7 天最高价 - 最低价 不超过 10%
+    SEVEN_DAY_LOW_VOLATILITY: In the recent 7 trading days, the max price - min price range is less than 10%.
+    RECENT_LOW_VOLUME: Today's volume is lower than the average volume of the last 20 / .. / .. days.
     """
 
     STAGE2 = "stage2"
     MINERVINI_5M = "minervini_5m"
     MINERVINI_1M = "minervini_1m"
     SEVEN_DAY_LOW_VOLATILITY = "seven_day_low_volatility"
+    RECENT_LOW_VOLUME = "recent_low_volume"
 
     @classmethod
     def list(cls):
@@ -96,6 +98,9 @@ class TaAnalyzer:
             elif cret == TaMeasurements.SEVEN_DAY_LOW_VOLATILITY.value:
                 _ = self._cret_days_vol(kline, days=7, vol=0.12)
                 result[cret] = _
+            elif cret == TaMeasurements.RECENT_LOW_VOLUME.value:
+                _ = self._cret_recent_low_volume(kline, days=1)
+                result[cret] = _
             else:
                 raise ValueError(f"Unknown criteria: {cret}")
         return result
@@ -135,7 +140,8 @@ class TaAnalyzer:
         # Conditions
         latest = kline.iloc[-1]
         c_1 = latest["adjClose"] > latest["ma150"]
-        c_2 = latest["ma150"] > latest["ma200"]
+        # Slightly modified the criteria, making it available for the stock that is pumped recently.
+        c_2 = latest["ma150"] > latest["ma200"] if self.rs < 85 else True
 
         # c_3
         ma200 = kline["ma200"]
@@ -164,6 +170,7 @@ class TaAnalyzer:
         if max_drawdown < -0.35:  # 35% Max drawdown
             c_12 = False
 
+        logging.warning(f"Cret Stage 2: {self.ticker}")
         logging.warning(f"c_1: {c_1}")
         logging.warning(f"c_2: {c_2}")
         logging.warning(f"c_3: {c_3}")
@@ -209,4 +216,25 @@ class TaAnalyzer:
         high = kline.close.max()
         low = kline.close.min()
         res = high / low <= 1 + vol
+        return res
+
+    def _cret_recent_low_volume(self, _kline: pd.DataFrame, days: int = 1) -> bool:
+        """
+        Check recent low volume
+        """
+        kline = _kline.copy().tail(20)
+        if not kline.shape[0] < 20:  # Must have at least 20 days
+            return False
+        # Recent 1 days volume
+        latest_avg_volume = kline["volume"].iloc[-days:].mean()
+        last_5d_volume = kline["volume"].iloc[-5:].mean()
+        last_10d_volume = kline["volume"].iloc[-10:].mean()
+        last_20d_volume = kline["volume"].iloc[-20:].mean()
+
+        # Cret 1 - Less than 50% of the average volume
+        _c1 = latest_avg_volume < min(last_5d_volume, last_10d_volume, last_20d_volume)
+        # Cret 2 - At least 200,000 Outstanding Shares - Cannot process, default True
+        _c2 = True
+
+        res = _c1 and _c2
         return res
