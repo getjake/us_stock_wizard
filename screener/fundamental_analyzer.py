@@ -83,8 +83,7 @@ class FundamentalAnalyzer:
     def cret_1(self) -> bool:
         """
         Criteria
-        1. Sales YoY growth rate > 20%
-        2. netIncome YoY growth rate > 20%
+        1. Sales YoY growth rate > 30%
         """
         try:
             data = self.analyze()
@@ -92,10 +91,11 @@ class FundamentalAnalyzer:
                 logging.warning("No fundamental data found")
                 return False
 
-            sales_yoy = data.iloc[-1]["sales_YoY"] > 0.2
-            netIncome_yoy = data.iloc[-1]["netIncome_YoY"] > 0.2
+            sales_yoy = data.iloc[-1]["sales_YoY"] > 0.3
+            # Disable for now
+            # netIncome_yoy = data.iloc[-1]["netIncome_YoY"] > 0.2
 
-            _ = sales_yoy and netIncome_yoy
+            _ = sales_yoy
             return _
         except Exception as e:
             logging.error(e)
@@ -184,10 +184,14 @@ class FundamentalScreener:
         df = self.stocks_df.copy()
         tickers = df["ticker"].tolist()
         res = []
-        for ticker in tickers[:20]:
-            analyzer = FundamentalAnalyzer(ticker=ticker)
-            await analyzer.get_fundamental()
-            _ = analyzer.get_result(crets)
+        for ticker in tickers:
+            _: bool = False
+            try:
+                analyzer = FundamentalAnalyzer(ticker=ticker)
+                await analyzer.get_fundamental()
+                _ = analyzer.get_result(crets)
+            except Exception as e:
+                logging.error(f"Analyse {ticker} failed: {e}")
             if _:
                 res.append(ticker)
         return res
