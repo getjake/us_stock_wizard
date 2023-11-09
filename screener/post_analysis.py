@@ -51,7 +51,7 @@ class PostAnalysis:
         # Disable them for now. bc. useless somehow.
         # await self.analyze_stage2_high_rs()
         # await self.analyze_stage2_rs_newborn()
-
+        await self.analyze_stage2_good_fundamentals()
         await self.analyze_ipo()
 
         # Create excel file to tempdir
