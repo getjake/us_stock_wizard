@@ -110,7 +110,6 @@ class StockTickers:
             )
             & ~_data["industry"].str.contains("Blank Checks", case=False)
             & ~(_data["ticker"].str.len() == 5)
-            & ~_data["ticker"].str.endswith("W")
         ]
 
         _data = _data[columns.values()]
@@ -121,8 +120,8 @@ class StockTickers:
 
     async def handle_all_tickers(self) -> None:
         self.get_all_tickers()
-        # await self._handle_tickers(market=StockMarket.NASDAQ)
-        # await self._handle_tickers(market=StockMarket.NYSE)
+        await self._handle_tickers(market=StockMarket.NASDAQ)
+        await self._handle_tickers(market=StockMarket.NYSE)
         await self._handle_tickers(market=StockMarket.AMEX)
 
     async def update_blank_fields(self) -> None:
@@ -137,7 +136,7 @@ class StockTickers:
 
         succ_count = 0
         fail_count = 0
-        for index, row in data.iterrows():
+        for _, row in data.iterrows():
             ticker = row["ticker"]
             print(f"Processing {ticker}")
             try:
