@@ -47,8 +47,11 @@ class PostAnalysis:
 
         await self.analyze_stage2()
         await self.analyze_stage2_diff()
-        await self.analyze_stage2_high_rs()
-        await self.analyze_stage2_rs_newborn()
+
+        # Disable them for now. bc. useless somehow.
+        # await self.analyze_stage2_high_rs()
+        # await self.analyze_stage2_rs_newborn()
+
         await self.analyze_ipo()
 
         # Create excel file to tempdir
@@ -166,6 +169,42 @@ class PostAnalysis:
         self.to_save["stage2_preferred"] = stage2_overview_preferred
         self.to_save["stage2_non_blacklist"] = stage2_overview_non_blacklist
         return
+
+    async def analyze_stage2_good_fundamentals(self) -> None:
+        """
+        Filter the stage2 stocks with good fundamentals
+        """
+        # Good fundamentals
+        good_fundamental_stocks = await StockDbUtils.read_first(
+            DbTable.REPORT,
+            where={"kind": "GoodFundamentals"},
+        )
+        if not good_fundamental_stocks:
+            # Not available, do thing.
+            logging.warning(f"No GoodFundamentals data. Skip.")
+            return
+        _stocks: List[str] = good_fundamental_stocks["data"]
+        if not _stocks:
+            logging.warning(f"No GoodFundamentals data. Skip.")
+            return
+
+        # Stage2 Good Fundamentals
+        _stage2 = self.to_save["stage2"].copy()
+        _stage2 = _stage2[_stage2["ticker"].isin(_stocks)]
+
+        # Stage2GF tickers
+        _stage2_tickers = _stage2["ticker"].tolist()
+
+        # Insert database
+        _ = {
+            "date": pd.to_datetime(self.date),
+            "kind": "PostAnalysis_stage2_non_blacklist",
+            "data": Json(_stage2_tickers),
+        }
+
+        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
+
+        self.to_save["stage2_good_fundamentals"] = _stage2
 
     async def analyze_stage2_diff(self) -> None:
         """
