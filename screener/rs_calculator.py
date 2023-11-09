@@ -58,7 +58,7 @@ class RelativeStrengthCalculator:
 
     async def batch_get_rs(
         self, ticker: str, start: datetime.date, end: datetime.date
-    ) -> Optional[pd.DataFrame]:
+    ) -> List[pd.DataFrame]:
         """
         Calc the RS of a spec stock in a date range.
         """
@@ -69,6 +69,7 @@ class RelativeStrengthCalculator:
         kline["date"] = pd.to_datetime(kline["date"])
         kline.set_index("date", inplace=True)
         kline = kline.resample("D").ffill()
+        kline["30d_ago"] = kline["adjClose"].shift(30)
         kline["90d_ago"] = kline["adjClose"].shift(90)
         kline["180d_ago"] = kline["adjClose"].shift(180)
         kline["270d_ago"] = kline["adjClose"].shift(270)
@@ -80,42 +81,88 @@ class RelativeStrengthCalculator:
             + kline["adjClose"] / kline["360d_ago"] * 0.2
         )
 
+        # Handle M1, M3 and M6 only
+        kline[f"{ticker}_M1"] = kline["adjClose"] / kline["30d_ago"]
+        kline[f"{ticker}_M3"] = kline["adjClose"] / kline["90d_ago"]
+        kline[f"{ticker}_M6"] = kline["adjClose"] / kline["180d_ago"]
+
         # filter start and end date
         _start = pd.to_datetime(start)
         _end = pd.to_datetime(end)
         kline = kline[kline.index >= _start]
         kline = kline[kline.index <= _end]
-        result = kline[[ticker]]
-        return result
+
+        _rs = kline[[ticker]]
+        _m1 = kline[[f"{ticker}_M1"]]
+        _m1 = _m1.rename(columns={f"{ticker}_M1": ticker})
+        _m3 = kline[[f"{ticker}_M3"]]
+        _m3 = _m3.rename(columns={f"{ticker}_M3": ticker})
+        _m6 = kline[[f"{ticker}_M6"]]
+        _m6 = _m6.rename(columns={f"{ticker}_M6": ticker})
+        return _rs, _m1, _m3, _m6
 
     async def batch_get_all_rs(self, start: datetime.date, end: datetime.date) -> None:
         """
         Get RS of all stocks in a date range
         """
-        combined = pd.DataFrame()
+        combined_rs = pd.DataFrame()
+        combined_m1 = pd.DataFrame()
+        combined_m3 = pd.DataFrame()
+        combined_m6 = pd.DataFrame()
         for ticker in self.stocks:
             logging.warning(f"Batch RS Calc: {ticker} - {start} - {end}")
-            rs_df = await self.batch_get_rs(ticker, start, end)
+            rs_df, m1_df, m3_df, m6_df = await self.batch_get_rs(ticker, start, end)
             if rs_df is None:
                 continue
-            combined = pd.concat([combined, rs_df], axis=1)
+            combined_rs = pd.concat([combined_rs, rs_df], axis=1)
+            combined_m1 = pd.concat([combined_m1, m1_df], axis=1)
+            combined_m3 = pd.concat([combined_m3, m3_df], axis=1)
+            combined_m6 = pd.concat([combined_m6, m6_df], axis=1)
 
         succ_count = 0
         fail_count = 0
-        for index, row in combined.iterrows():
+
+        for index, row in combined_rs.iterrows():
             date = index
+            # Basic RS
             _df = pd.DataFrame(row)
             _df.dropna(inplace=True)
+            # Relative Strength
             _df["rank"] = _df[_df.columns[0]].rank(ascending=True)
             _df["rscore"] = _df["rank"] / len(_df["rank"]) * 100
             _df["rscore"] = _df["rscore"].astype(int)
-            _df.reset_index(inplace=True)
-            _df.rename(columns={"index": "ticker"}, inplace=True)
-            _df["date"] = pd.Timestamp(date)
-            _df = _df[["date", "rscore", "ticker"]]
-            if not _df.empty:
+
+            # M1
+            _m1 = pd.DataFrame(combined_m1.loc[date])
+            _m1.dropna(inplace=True)
+            _m1["rank"] = _m1[_m1.columns[0]].rank(ascending=True)
+            _m1["M1"] = _m1["rank"] / len(_m1["rank"]) * 100
+            _m1["M1"] = _m1["M1"].astype(int)
+
+            # M3
+            _m3 = pd.DataFrame(combined_m3.loc[date])
+            _m3.dropna(inplace=True)
+            _m3["rank"] = _m3[_m3.columns[0]].rank(ascending=True)
+            _m3["M3"] = _m3["rank"] / len(_m3["rank"]) * 100
+            _m3["M3"] = _m3["M3"].astype(int)
+
+            # M6
+            _m6 = pd.DataFrame(combined_m6.loc[date])
+            _m6.dropna(inplace=True)
+            _m6["rank"] = _m6[_m6.columns[0]].rank(ascending=True)
+            _m6["M6"] = _m6["rank"] / len(_m6["rank"]) * 100
+            _m6["M6"] = _m6["M6"].astype(int)
+
+            # Merge
+            merged = pd.concat([_df, _m1, _m3, _m6], axis=1)
+            merged.reset_index(inplace=True)
+            merged.rename(columns={"index": "ticker"}, inplace=True)
+            merged["date"] = pd.Timestamp(date)
+            merged = merged[["date", "ticker", "rscore", "M1", "M3", "M6"]]
+
+            if not merged.empty:
                 await StockDbUtils.insert(
-                    DbTable.RELATIVE_STRENGTH, _df.to_dict(orient="records")
+                    DbTable.RELATIVE_STRENGTH, merged.to_dict(orient="records")
                 )
                 logging.warning(f"Batch RS Calc Done for {date}")
                 succ_count += 1

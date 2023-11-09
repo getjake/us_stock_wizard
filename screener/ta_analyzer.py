@@ -23,6 +23,9 @@ class TaMeasurements(Enum):
     MINERVINI_1M = "minervini_1m"
     SEVEN_DAY_LOW_VOLATILITY = "seven_day_low_volatility"
     RECENT_LOW_VOLUME = "recent_low_volume"
+    QULL_M1 = "qull_m1"
+    QULL_M3 = "qull_m3"
+    QULL_M6 = "qull_m6"
 
     @classmethod
     def list(cls):
@@ -39,16 +42,19 @@ class TaAnalyzer:
     """
 
     def __init__(
-        self, ticker: str, rs: Optional[float] = 0, cret: List[TaMeasurements] = []
+        self,
+        ticker: str,
+        rs: Optional[List[int]] = None,
+        cret: List[TaMeasurements] = [],
     ) -> None:
         """
         Args:
             ticker (str): Ticker
-            rs (Optional[float]): Today's Relative strength score
+            rs (Optional[float]): Today's Relative strength score - List [ Rscore, M1, M3, M6 ]
             cret: List of criteria to be used
         """
         self.ticker = ticker
-        self.rs = rs or 0  # on the day's rs
+        self.rs = rs or [0, 0, 0, 0]
         self.db_utils = StockDbUtils()
         self.kline: Optional[pd.DataFrame] = None
         # Default to all criteria
@@ -101,6 +107,15 @@ class TaAnalyzer:
             elif cret == TaMeasurements.RECENT_LOW_VOLUME.value:
                 _ = self._cret_recent_low_volume(kline, days=1)
                 result[cret] = _
+            elif cret == TaMeasurements.QULL_M1.value:
+                _ = self._cret_qull(kline, months=1)
+                result[cret] = _
+            elif cret == TaMeasurements.QULL_M3.value:
+                _ = self._cret_qull(kline, months=3)
+                result[cret] = _
+            elif cret == TaMeasurements.QULL_M6.value:
+                _ = self._cret_qull(kline, months=6)
+                result[cret] = _
             else:
                 raise ValueError(f"Unknown criteria: {cret}")
         return result
@@ -141,7 +156,7 @@ class TaAnalyzer:
         latest = kline.iloc[-1]
         c_1 = latest["adjClose"] > latest["ma150"]
         # Slightly modified the criteria, making it available for the stock that is pumped recently.
-        c_2 = latest["ma150"] > latest["ma200"] if self.rs < 85 else True
+        c_2 = latest["ma150"] > latest["ma200"] if self.rs[0] < 85 else True
 
         # c_3
         ma200 = kline["ma200"]
@@ -150,7 +165,7 @@ class TaAnalyzer:
         c_4 = latest["ma50"] > latest["ma150"]
         c_5 = latest["adjClose"] > latest["rolling_low"] * 1.25
         c_6 = latest["adjClose"] > latest["rolling_high"] * 0.75
-        c_7 = self.rs > 70
+        c_7 = self.rs[0] > 70
         c_8 = latest["adjClose"] > latest["ma50"]
         c_9 = latest["adjClose"] >= 5  # 5 USD
         c_10 = _avg_vol >= 25000  # 25000 Share Volume at least
@@ -170,23 +185,10 @@ class TaAnalyzer:
         if max_drawdown < -0.35:  # 35% Max drawdown
             c_12 = False
 
-        logging.warning(f"Cret Stage 2: {self.ticker}")
-        logging.warning(f"c_1: {c_1}")
-        logging.warning(f"c_2: {c_2}")
-        logging.warning(f"c_3: {c_3}")
-        logging.warning(f"c_4: {c_4}")
-        logging.warning(f"c_5: {c_5}")
-        logging.warning(f"c_6: {c_6}")
-        logging.warning(f"c_7: {c_7}")
-        logging.warning(f"c_8: {c_8}")
-        logging.warning(f"c_9: {c_9}")
-        logging.warning(f"c_10: {c_10}")
-        logging.warning(f"c_11: {c_11}")
-        logging.warning(f"c_12: {c_12}")
-
         result = (
             sum([c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12]) >= 12
         )
+        logging.warning(f"Stage 2 - {self.ticker} Result: {result}")
         return result
 
     def _cret_minervini(self, _kline: pd.DataFrame, months: int) -> bool:
@@ -238,3 +240,50 @@ class TaAnalyzer:
 
         res = _c1 and _c2
         return res
+
+    def _cret_qull(self, _kline: pd.DataFrame, months: int) -> bool:
+        """
+        Qull's screening cret.
+
+        Args:
+        - months: 1 / 3 / 6
+        """
+        if months not in [1, 3, 6]:
+            logging.warning("Only support 1 / 3 / 6 months")
+            return False
+        # Get corresponding RS
+        rs = 0
+        if months == 1:
+            rs = self.rs[1]
+        elif months == 3:
+            rs = self.rs[2]
+        elif months == 6:
+            rs = self.rs[3]
+
+        if rs is None:
+            logging.warning("RS is not available")
+            return False
+
+        if rs <= 90:
+            logging.warning("RS is not good enough")
+            return False
+
+        _kline = _kline.copy()
+
+        # Calc ADR
+        _kline = _kline.iloc[-20:, :]  # Last 20 days only
+        _kline.loc[:, "high_low"] = _kline["high"] / _kline["low"]
+        adr = 100 * (_kline["high_low"].mean() - 1)
+        # ADR Must >= 4
+        if adr < 4:
+            logging.warning("ADR is too low")
+            return False
+
+        # Daily Volume > 8M USD on average
+        _kline.loc[:, "volume_usd"] = _kline["volume"] * _kline["close"]
+        mean_volume_usd = _kline.volume_usd.mean()
+        if mean_volume_usd < 8000000:
+            logging.warning("Volume is too low")
+            return False
+
+        return True
