@@ -63,10 +63,18 @@ API_HOST=https://your-domain.com/
 - Set up the cron jobs. Run `crontab -e` to edit the cron jobs. Add the following lines to the file:
 
 ```bash
-# Update fundamental data every day at 9:30
+# Note this is New York Time Zone!
+
+# Update Full Fundamentals every week
+0 23 * * 5 python3 /path/to/us_stock_wizard/updater/full_fundamentals.py
+# Update fundamental data & earning call data every day at 9:30
 30 09 * * * python3 /path/to/us_stock_wizard/updater/get_fundamentals.py
+# Screen stocks with good fundamentals every week
+0 3 * * 6 python3 /path/to/us_stock_wizard/screener/good_fundamentals_screener.py
 # Update dividend data every day at 9:30 to accelerete the candlestick chart generation
 30 07 * * * python3 /path/to/us_stock_wizard/updater/get_dividends.py
+# Calc matching RS Stocks.
+40 01 * * * python3 /path/to/us_stock_wizard/updater/calc_matching_rs.py
 # After market close, update candlestick chart every day and generate a report for you.
 05 16 * * * python3 /path/to/us_stock_wizard/updater/all_in_one.py
 ```
