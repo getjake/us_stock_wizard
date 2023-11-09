@@ -21,7 +21,7 @@ class DailyScreener:
     def __init__(self) -> None:
         self.stocks: Optional[List[str]] = None
         self.succ_tickers: Dict[str, List[str]] = {}  # 选股结果
-        self.rs_dict: Optional[dict] = {}
+        self.rs_dict: Optional[Dict[str, List[int]]] = {}
 
     async def initialize(self) -> None:
         """
@@ -31,10 +31,16 @@ class DailyScreener:
         relative_strength = await StockDbUtils.read(
             DbTable.RELATIVE_STRENGTH, where={"date": today}, output="df"
         )
+        relative_strength["combined"] = relative_strength[
+            ["rscore", "M1, M3", "M6"]
+        ].values.tolist
+
+        # Relative Strength
+
         if relative_strength.empty:
             raise ValueError("No relative strength data found!")
         self.rs_dict = dict(
-            zip(relative_strength["ticker"], relative_strength["rscore"])
+            zip(relative_strength["ticker"], relative_strength["combined"])
         )
         self.stocks = await StockCommon.get_stock_list()
 
