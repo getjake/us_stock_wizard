@@ -198,7 +198,7 @@ class PostAnalysis:
         # Insert database
         _ = {
             "date": pd.to_datetime(self.date),
-            "kind": "PostAnalysis_stage2_non_blacklist",
+            "kind": "PostAnalysis_stage2_GoodFundamentals",
             "data": Json(_stage2_tickers),
         }
 
