@@ -87,6 +87,9 @@ model RelativeStrength {
   ticker String
   date   DateTime @db.Date
   rscore Float
+  M1     Float?
+  M3     Float?
+  M6     Float?
 
   @@unique([ticker, date])
   @@index([ticker, date])
