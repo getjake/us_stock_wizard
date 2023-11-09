@@ -31,6 +31,8 @@ class DailyScreener:
         relative_strength = await StockDbUtils.read(
             DbTable.RELATIVE_STRENGTH, where={"date": today}, output="df"
         )
+        if relative_strength.empty:
+            raise ValueError("No relative strength data found!")
         self.rs_dict = dict(
             zip(relative_strength["ticker"], relative_strength["rscore"])
         )
