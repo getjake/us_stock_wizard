@@ -32,7 +32,7 @@ class DailyScreener:
             DbTable.RELATIVE_STRENGTH, where={"date": today}, output="df"
         )
         relative_strength["combined"] = relative_strength[
-            ["rscore", "M1, M3", "M6"]
+            ["rscore", "M1", "M3", "M6"]
         ].values.tolist
 
         # Relative Strength
