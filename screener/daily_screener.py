@@ -60,7 +60,6 @@ class DailyScreener:
             succ_dict = ta.get_result()
             return succ_dict
         except Exception as e:
-            raise e
             logging.error(f"Failed to screen stock {ticker}: {e}")
             return {}
 
