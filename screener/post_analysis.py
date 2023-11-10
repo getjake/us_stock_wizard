@@ -51,6 +51,7 @@ class PostAnalysis:
         # Disable them for now. bc. useless somehow.
         # await self.analyze_stage2_high_rs()
         # await self.analyze_stage2_rs_newborn()
+
         await self.analyze_stage2_good_fundamentals()
         await self.analyze_ipo()
 
@@ -187,6 +188,51 @@ class PostAnalysis:
         if not _stocks:
             logging.warning(f"No GoodFundamentals data. Skip.")
             return
+
+        # Stage2 Good Fundamentals
+        _stage2 = self.to_save["stage2"].copy()
+        _stage2 = _stage2[_stage2["ticker"].isin(_stocks)]
+
+        # Stage2GF tickers
+        _stage2_tickers = _stage2["ticker"].tolist()
+
+        # Insert database
+        _ = {
+            "date": pd.to_datetime(self.date),
+            "kind": "PostAnalysis_stage2_GoodFundamentals",
+            "data": Json(_stage2_tickers),
+        }
+
+        await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
+
+        self.to_save["stage2_good_fundamentals"] = _stage2
+
+    async def analyze_qull(self, months: int) -> None:
+        """
+        Filter the stage2 stocks with good fundamentals
+        """
+        if months not in [1, 3, 6]:
+            logging.error("Only support 1, 3, 6 months.")
+            return
+
+        # Good fundamentals
+        db_entry = f"qull_m{months}"
+
+        filtered = await StockDbUtils.read_first(
+            DbTable.REPORT,
+            where={"kind": db_entry},
+        )
+        if not filtered:
+            # Not available, do thing.
+            logging.warning(f"No Qull data. Skip.")
+            return
+        _stocks: List[str] = filtered["data"]
+        if not _stocks:
+            logging.warning(f"No GoodFundamentals data. Skip.")
+            return
+
+        tickers = await StockDbUtils.read(DbTable.TICKERS, output="df")
+        tickers = tickers[["ticker", "sector", "industry"]]
 
         # Stage2 Good Fundamentals
         _stage2 = self.to_save["stage2"].copy()

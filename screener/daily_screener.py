@@ -33,7 +33,7 @@ class DailyScreener:
         )
         relative_strength["combined"] = relative_strength[
             ["rscore", "M1", "M3", "M6"]
-        ].values.tolist
+        ].values.tolist()
 
         # Relative Strength
 
@@ -60,6 +60,7 @@ class DailyScreener:
             succ_dict = ta.get_result()
             return succ_dict
         except Exception as e:
+            raise e
             logging.error(f"Failed to screen stock {ticker}: {e}")
             return {}
 
