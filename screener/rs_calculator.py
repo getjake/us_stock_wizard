@@ -58,7 +58,7 @@ class RelativeStrengthCalculator:
 
     async def batch_get_rs(
         self, ticker: str, start: datetime.date, end: datetime.date
-    ) -> List[pd.DataFrame]:
+    ) -> Optional[List[pd.DataFrame]]:
         """
         Calc the RS of a spec stock in a date range.
         """
@@ -111,9 +111,10 @@ class RelativeStrengthCalculator:
         combined_m6 = pd.DataFrame()
         for ticker in self.stocks:
             logging.warning(f"Batch RS Calc: {ticker} - {start} - {end}")
-            rs_df, m1_df, m3_df, m6_df = await self.batch_get_rs(ticker, start, end)
-            if rs_df is None:
+            packed = await self.batch_get_rs(ticker, start, end)
+            if packed is None:
                 continue
+            rs_df, m1_df, m3_df, m6_df = packed
             combined_rs = pd.concat([combined_rs, rs_df], axis=1)
             combined_m1 = pd.concat([combined_m1, m1_df], axis=1)
             combined_m3 = pd.concat([combined_m3, m3_df], axis=1)
