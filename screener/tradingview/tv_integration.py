@@ -80,7 +80,7 @@ class TradingViewIntegration:
             raise ValueError("API_HOST env not set")
 
         url = urllib.parse.urljoin(self.host, f"/api/reports/{kind}")
-        print("url is", url)
+        logging.info(f"Getting data from {url}")
         data = NetworkRequests._httpx_get_data(url=url, timeout=30)
         return data
 

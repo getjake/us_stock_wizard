@@ -52,6 +52,11 @@ class PostAnalysis:
         # await self.analyze_stage2_high_rs()
         # await self.analyze_stage2_rs_newborn()
 
+        # Qull
+        await self.analyze_qull(1)
+        await self.analyze_qull(3)
+        await self.analyze_qull(6)
+
         await self.analyze_stage2_good_fundamentals()
         await self.analyze_ipo()
 
@@ -72,6 +77,10 @@ class PostAnalysis:
         rs = await StockDbUtils.read(
             DbTable.RELATIVE_STRENGTH, where={"date": self.date_ts}, output="df"
         )
+        if rs.empty:
+            logging.warning(f"No RelativeStrength data. Skip.")
+            return
+
         rs["date"] = pd.to_datetime(rs["date"]).dt.date
 
         # fundamental
@@ -215,9 +224,17 @@ class PostAnalysis:
             logging.error("Only support 1, 3, 6 months.")
             return
 
+        rs = await StockDbUtils.read(
+            DbTable.RELATIVE_STRENGTH, where={"date": self.date_ts}, output="df"
+        )
+        if rs.empty:
+            logging.warning(f"No RelativeStrength data. Skip.")
+            return
+
+        rs["date"] = pd.to_datetime(rs["date"]).dt.date
+
         # Good fundamentals
         db_entry = f"qull_m{months}"
-
         filtered = await StockDbUtils.read_first(
             DbTable.REPORT,
             where={"kind": db_entry},
@@ -234,23 +251,29 @@ class PostAnalysis:
         tickers = await StockDbUtils.read(DbTable.TICKERS, output="df")
         tickers = tickers[["ticker", "sector", "industry"]]
 
-        # Stage2 Good Fundamentals
-        _stage2 = self.to_save["stage2"].copy()
-        _stage2 = _stage2[_stage2["ticker"].isin(_stocks)]
+        # Filter by `filtered`
+        tickers = tickers[tickers["ticker"].isin(_stocks)]
 
-        # Stage2GF tickers
-        _stage2_tickers = _stage2["ticker"].tolist()
+        # Merged
+        merged = rs.merge(tickers, on="ticker", how="right")
+        # Rearrange columns
+        cols = ["ticker", "sector", "industry", "rscore", "M1", "M3", "M6"]
+        merged = merged[cols]
 
+        # Sort by ...
+        sort_col = f"M{months}"
+        result = merged.sort_values(by=sort_col, ascending=False)
+        final_tickers = result["ticker"].tolist()
         # Insert database
         _ = {
             "date": pd.to_datetime(self.date),
-            "kind": "PostAnalysis_stage2_GoodFundamentals",
-            "data": Json(_stage2_tickers),
+            "kind": f"PostAnalysis_Qull_M{months}",
+            "data": Json(final_tickers),
         }
-
         await StockDbUtils.insert(table=DbTable.REPORT, data=[_])
 
-        self.to_save["stage2_good_fundamentals"] = _stage2
+        self.to_save[f"PostAnalysis_Qull_M{months}"] = result
+        return
 
     async def analyze_stage2_diff(self) -> None:
         """
