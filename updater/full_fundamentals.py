@@ -11,7 +11,7 @@ from us_stock_wizard.src.fundamentals import Fundamentals
 async def main():
     fundamentals = Fundamentals()
     await fundamentals.handle_earning_call_data()
-    await fundamentals.handle_all_is_data(filter="null")
+    await fundamentals.handle_all_is_data(filter="all")
     logging.info("Done Full Earning Call and Fundamental")
 
 
