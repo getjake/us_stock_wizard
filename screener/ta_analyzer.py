@@ -315,6 +315,7 @@ class TaAnalyzer:
         """
         EP's screening cret.
         In the past 6 months, a stock price has ever pumped over 50% in 14 days.
+        Recent 5 days average volume > 1M USD.
         """
         _kline = _kline.copy()
         _kline = _kline.sort_values(by="date", ascending=True)
@@ -330,4 +331,16 @@ class TaAnalyzer:
             .rolling(window=14)
             .apply(self.max_percent_increase_in_window, raw=True)
         )
-        return recent_data["qualified"].any()
+        pump_ok = recent_data["qualified"].any()
+        if not pump_ok:
+            return False
+
+        # Last 5 day avg volume > 1M USD.
+        recent_data = recent_data.tail(5)
+        recent_data.loc[:, "volume_usd"] = recent_data["volume"] * recent_data["close"]
+        mean_volume_usd = recent_data.volume_usd.mean()
+        volume_ok = mean_volume_usd > 1000000
+        if not volume_ok:
+            return False
+
+        return True
