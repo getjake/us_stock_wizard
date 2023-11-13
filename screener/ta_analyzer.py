@@ -3,6 +3,8 @@ from enum import Enum
 from dateutil.relativedelta import relativedelta
 import logging
 import datetime
+from datetime import timedelta
+import numpy as np
 import pandas as pd
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 
@@ -26,6 +28,7 @@ class TaMeasurements(Enum):
     QULL_M1 = "qull_m1"
     QULL_M3 = "qull_m3"
     QULL_M6 = "qull_m6"
+    EP = "ep"
 
     @classmethod
     def list(cls):
@@ -115,6 +118,9 @@ class TaAnalyzer:
                 result[cret] = _
             elif cret == TaMeasurements.QULL_M6.value:
                 _ = self._cret_qull(kline, months=6)
+                result[cret] = _
+            elif cret == TaMeasurements.EP.value:
+                _ = self._cret_ep(kline)
                 result[cret] = _
             else:
                 raise ValueError(f"Unknown criteria: {cret}")
@@ -287,3 +293,41 @@ class TaAnalyzer:
             return False
 
         return True
+
+    @staticmethod
+    def max_percent_increase_in_window(window: pd.Series) -> bool:
+        """
+        Check if there is a 50% price increase within a given window of stock prices.
+
+        Args:
+        window (pd.Series): A Pandas Series representing a window of stock prices.
+
+        Returns:
+        bool: True if there is at least a 50% increase in price within the window, False otherwise.
+        """
+        if np.isnan(window).any():
+            return False
+        min_price = np.min(window)
+        max_price = np.max(window)
+        return max_price >= 1.5 * min_price
+
+    def _cret_ep(self, _kline: pd.DataFrame) -> bool:
+        """
+        EP's screening cret.
+        In the past 6 months, a stock price has ever pumped over 50% in 14 days.
+        """
+        _kline = _kline.copy()
+        _kline = _kline.sort_values(by="date", ascending=True)
+        _begin = (
+            datetime.datetime.now() - timedelta(days=6 * 30)
+        ).date()  # 6 months ago
+        recent_data = _kline[_kline["date"] >= _begin].copy()
+        if recent_data.empty:
+            logging.warning("No recent data")
+            return False
+        recent_data.loc[:, "qualified"] = (
+            recent_data["adjClose"]
+            .rolling(window=14)
+            .apply(self.max_percent_increase_in_window, raw=True)
+        )
+        return recent_data["qualified"].any()
