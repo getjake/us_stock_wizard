@@ -80,7 +80,7 @@ class TradingViewIntegration:
             raise ValueError("API_HOST env not set")
 
         url = urllib.parse.urljoin(self.host, f"/api/reports/{kind}")
-        print("url is", url)
+        logging.info(f"Getting data from {url}")
         data = NetworkRequests._httpx_get_data(url=url, timeout=30)
         return data
 
@@ -94,8 +94,33 @@ class TradingViewIntegration:
             return await self._get_data_from_api(kind)
         raise ValueError(f"Unknown source {self.source}")
 
+    def handle_binance_tickers(self, kind: str) -> List[str]:
+        """
+        Get all spot tickers from Binance API.
+
+        kind: str `binance_usdt`, `binance_btc`
+        """
+        assert kind in [
+            "binance_usdt",
+            "binance_btc",
+        ], "kind must be binance_usdt OR binance_btc"
+        filter_str = kind.split("_")[-1]
+        url = "https://api3.binance.com/api/v3/ticker/price"
+        data = NetworkRequests._httpx_get_data(url=url, timeout=30)
+        all_symbols = []
+        for item in data:
+            symbol = item["symbol"]
+            if symbol.endswith(filter_str.upper()):
+                _ = "BINANCE:" + symbol
+                all_symbols.append(_)
+        return all_symbols
+
     async def handle_category(self, kind: str, id: int) -> str:
-        tickers: List[str] = await self.get_data(kind)
+        tickers = []
+        if "binance" in kind.lower():
+            tickers = self.handle_binance_tickers(kind)
+        else:
+            tickers: List[str] = await self.get_data(kind)
         _id = str(id)
         _body = json.dumps(tickers)
         exported_script = self.js_template.replace("$TICKERS$", _body).replace(
