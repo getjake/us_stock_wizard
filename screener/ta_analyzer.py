@@ -71,6 +71,8 @@ class TaAnalyzer:
             DbTable.DAILY_KLINE, where={"ticker": self.ticker}, output="df"
         )
         kline["date"] = pd.to_datetime(kline["date"]).dt.date
+        kline = kline.sort_values(by="date", ascending=True)
+        kline = kline.drop_duplicates(subset=["date"], keep="last")
         self.kline = kline
 
     def get_result(self, date: Optional[str] = None) -> Dict[TaMeasurements, bool]:
@@ -275,6 +277,13 @@ class TaAnalyzer:
             return False
 
         _kline = _kline.copy()
+
+        # Curr Price > MA50
+        curr_price = _kline.iloc[-1]["adjClose"]
+        ma50_close = _kline.tail(50)["adjClose"].mean()
+        if curr_price < ma50_close:
+            logging.warning("Current price is lower than MA50")
+            return False
 
         # Calc ADR
         _kline = _kline.iloc[-20:, :]  # Last 20 days only
