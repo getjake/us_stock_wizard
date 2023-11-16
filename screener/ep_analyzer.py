@@ -92,7 +92,7 @@ class EpAnalyzer:
             return False
 
     async def screen(
-        self, start_date: pd.Timestamp | str, gap_up: float = 0.1
+        self, start_date: pd.Timestamp | str, gap_up: float = 0.08
     ) -> pd.DataFrame:
         """
         Screen the EP.
@@ -118,9 +118,9 @@ class EpAnalyzer:
         ) / klines_merged["high_x"]
         # Sort descending by gap
         klines_merged.sort_values(by=["gap"], ascending=False, inplace=True)
-        # Filter out volume <= 5M USD per day.
+        # Filter out volume <= 1M USD per day.
         klines_merged = klines_merged[
-            (klines_merged["volume_x"] * klines_merged["close_x"] > 5e6)
+            (klines_merged["volume_x"] * klines_merged["close_x"] > 1e6)
         ]
         # Filter by gap
         klines_merged = klines_merged[klines_merged["gap"] > gap_up]
