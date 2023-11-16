@@ -118,7 +118,11 @@ class EpAnalyzer:
         ) / klines_merged["high_x"]
         # Sort descending by gap
         klines_merged.sort_values(by=["gap"], ascending=False, inplace=True)
-        # filter out gap < 0
+        # Filter out volume <= 5M USD per day.
+        klines_merged = klines_merged[
+            (klines_merged["volume_x"] * klines_merged["close_x"] > 5e6)
+        ]
+        # Filter by gap
         klines_merged = klines_merged[klines_merged["gap"] > gap_up]
 
         # Merge with reference
