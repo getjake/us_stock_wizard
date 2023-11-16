@@ -169,5 +169,5 @@ class EpAnalyzer:
                 continue
             self.results = pd.concat([self.results, res])
             if count % 10 == 0 or count == len(dates):
-                self.results.to_csv(self.export_file, index=False)
+                self.results.to_csv(self.export_file, index=True)
                 logging.warning(f"Saved to ep_results.csv")
