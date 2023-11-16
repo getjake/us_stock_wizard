@@ -1,3 +1,4 @@
+*.csv
 googleauth.json
 config.json
 tv-config.json

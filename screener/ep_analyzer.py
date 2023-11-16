@@ -1,6 +1,7 @@
 """
 Epsodic Pivot Analyzer
 """
+import os
 from typing import Optional, List, Dict
 from enum import Enum
 import logging
@@ -10,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
+from us_stock_wizard import StockRootDirectory
 
 
 class EpAnalyzer:
@@ -96,6 +98,7 @@ class EpAnalyzer:
 
         Args:
             start_date (pd.Timestamp | str): The Start Date
+            gap_up (float, optional): The Gap Up Percentage. Defaults to 0.1. -> 10%
         """
         init_succ = await self.initialize_data(start_date=start_date)
         if not init_succ:
@@ -164,5 +167,6 @@ class EpAnalyzer:
             self.results = pd.concat([self.results, res])
 
         # Save to file
-        self.results.to_csv("ep_results.csv", index=False)
+        _file = os.path.join(StockRootDirectory.root_dir(), "ep_results.csv")
+        self.results.to_csv(_file, index=False)
         logging.warning(f"Saved to ep_results.csv")
