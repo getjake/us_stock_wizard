@@ -30,6 +30,7 @@ class EpAnalyzer:
         self.kline_end: Optional[pd.DataFrame] = None
         self.common_tickers: Optional[List[str]] = None
         self.results = pd.DataFrame()  # Store the results
+        self.export_file = os.path.join(StockRootDirectory.root_dir(), "ep_results.csv")
 
     async def get_calendar(self) -> pd.DataFrame:
         """
@@ -159,14 +160,14 @@ class EpAnalyzer:
             (self.calendar["date"] >= start_date) & (self.calendar["date"] <= end_date)
         ]["date"].to_list()
         assert dates, "No dates in the range"
+        count = 0
         for _date in dates:
+            count += 1
             res = await self.screen(start_date=_date)
             logging.warning(f"There are {res.shape[0]} stocks gap up on {_date}")
             if res.empty:
                 continue
             self.results = pd.concat([self.results, res])
-
-        # Save to file
-        _file = os.path.join(StockRootDirectory.root_dir(), "ep_results.csv")
-        self.results.to_csv(_file, index=False)
-        logging.warning(f"Saved to ep_results.csv")
+            if count % 10 == 0 or count == len(dates):
+                self.results.to_csv(self.export_file, index=False)
+                logging.warning(f"Saved to ep_results.csv")
