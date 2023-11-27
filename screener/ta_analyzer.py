@@ -71,6 +71,8 @@ class TaAnalyzer:
             DbTable.DAILY_KLINE, where={"ticker": self.ticker}, output="df"
         )
         kline["date"] = pd.to_datetime(kline["date"]).dt.date
+        kline = kline.sort_values(by="date", ascending=True)
+        kline = kline.drop_duplicates(subset=["date"], keep="last")
         self.kline = kline
 
     def get_result(self, date: Optional[str] = None) -> Dict[TaMeasurements, bool]:
@@ -144,7 +146,7 @@ class TaAnalyzer:
         7. RS (relative strength) is above 70.
         8. Current price is above MA50.
         9. Stock Price > 5 USD
-        10. Daily Volume USD > 200k USD
+        10. Daily Volume USD > 5M USD & Daily Volume Share > 25,000
         11. Current close no more than 30% of the MA50
         12. Max Drawdown no more than 35% in the recent 90 trading days.
         """
@@ -174,8 +176,9 @@ class TaAnalyzer:
         c_7 = self.rs[0] > 70
         c_8 = latest["adjClose"] > latest["ma50"]
         c_9 = latest["adjClose"] >= 5  # 5 USD
-        c_10 = _avg_vol >= 25000  # 25000 Share Volume at least
-
+        c_10_1 = _avg_vol >= 25000  # 25000 Share Volume at least
+        c_10_2 = _avg_vol * latest["adjClose"] >= 5000000  # 5M USD
+        c_10 = c_10_1 and c_10_2
         # c_11 - No more than 30% of the MA50 - Miss the powerplay
         # c_11 = latest["adjClose"] <= latest["ma50"] * 1.3
         c_11 = True  # Disable for now
@@ -275,6 +278,13 @@ class TaAnalyzer:
             return False
 
         _kline = _kline.copy()
+
+        # Curr Price > MA50
+        curr_price = _kline.iloc[-1]["adjClose"]
+        ma50_close = _kline.tail(50)["adjClose"].mean()
+        if curr_price < ma50_close:
+            logging.warning("Current price is lower than MA50")
+            return False
 
         # Calc ADR
         _kline = _kline.iloc[-20:, :]  # Last 20 days only
