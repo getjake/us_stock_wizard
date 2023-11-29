@@ -60,13 +60,15 @@ API_HOST=https://your-domain.com/
 
 - Set up the database. Go to `./database/` directory, and run `docker-compose up -d`. Then, run `prisma db push` to create the database schema.
 
+- Run `python3 ./updater/initialize.py` after a clean installation.
+
 - Set up the cron jobs. Run `crontab -e` to edit the cron jobs. Add the following lines to the file:
 
 ```bash
 # Note this is New York Time Zone!
 
 # Update Full Fundamentals every week
-0 23 * * 5 python3 /path/to/us_stock_wizard/updater/full_fundamentals.py
+0 23 * * 5 python3 /path/to/us_stock_wizard/updater/get_full_fundamentals.py
 # Update fundamental data & earning call data every day at 9:30
 30 09 * * * python3 /path/to/us_stock_wizard/updater/get_fundamentals.py
 # Screen stocks with good fundamentals every week
