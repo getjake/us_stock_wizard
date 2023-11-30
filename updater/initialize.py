@@ -50,7 +50,7 @@ async def main():
     gfs = GoodFundamentalsScreener()
     await gfs.run()
     logging.info("Done Full Earning Call and Fundamental")
-    del dfs
+    del gfs
     gc.collect()
 
     rs = RelativeStrengthCalculator()
