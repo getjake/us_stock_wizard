@@ -35,17 +35,27 @@ class TradingViewIntegration:
         self.root = StockRootDirectory().root_dir()
         self.curr_dir = os.path.dirname(os.path.abspath(__file__))
         self.config: Dict[str, int] = config
-        self.js_template = ""
+        self.clear_all_template = ""
+        self.insert_all_template = ""
         self.host = host
         self.load()
 
     def load(self) -> None:
         # Load Template
-        _ = os.path.join(self.curr_dir, "template.js")
+
+        # Clear-all script
+        _ = os.path.join(self.curr_dir, "clear-all.js")
         if not os.path.exists(_):
-            raise FileNotFoundError("template.js not found")
+            raise FileNotFoundError("clear-all.js not found")
         with open(_, "r") as f:
-            self.js_template = f.read()
+            self.clear_all_template = f.read()
+
+        # Insert-all script
+        _ = os.path.join(self.curr_dir, "insert-all.js")
+        if not os.path.exists(_):
+            raise FileNotFoundError("insert-all.js not found")
+        with open(_, "r") as f:
+            self.insert_all_template = f.read()
 
         # Load config
         if not self.config:
@@ -123,16 +133,28 @@ class TradingViewIntegration:
             tickers: List[str] = await self.get_data(kind)
         _id = str(id)
         _body = json.dumps(tickers)
-        exported_script = self.js_template.replace("$TICKERS$", _body).replace(
+        exported_script = self.insert_all_template.replace("$TICKERS$", _body).replace(
             "$WATCHLIST_ID$", _id
         )
         return exported_script
 
     async def handle_all(self) -> str:
-        input(
-            "Please make sure your clear all watchlist first, then press enter to continue, or Ctrl-C to quit"
-        )
+        """
+        Allow the user to choose to delete the original list or not
+        """
+        is_delete: str = input("Would you like to delete the original list? (y/n):")
         _ = ""
+        if is_delete.lower() == "y":
+            for kind, tv_watchlist_id in self.config.items():
+                _ += self.clear_all_template.replace(
+                    "$WATCHLIST_ID$", str(tv_watchlist_id)
+                )
+                _ += "\n\n"
+            pyperclip.copy(_)  # Copy to pasteboard
+            input(
+                "Clear-all Copied to pasteboard, now paste to Chrome console in Tradingview.com and run, then press enter to continue"
+            )
+
         for kind, tv_watchlist_id in self.config.items():
             logging.warning(f"Exporting {kind} to watchlist {tv_watchlist_id}")
             _ += await self.handle_category(kind, tv_watchlist_id)
