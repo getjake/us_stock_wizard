@@ -7,7 +7,7 @@ generator client {
 // Change this to match your database connection
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://postgres:postgres@100.96.98.27:5435/stock_db"
+  url      = "postgresql://postgres:postgres@localhost:5435/stock_db"
 }
 
 enum ReportType {
