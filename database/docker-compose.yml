@@ -13,7 +13,7 @@ services:
       - ${DB_DATA_PATH_HOST:-postgres_data}:/var/lib/postgresql/data
       - ${DB_CUSTOM_PGDATA_PATH_HOST:-postgres_custom_pgdata}:/var/lib/postgresql/data/pgdata
     ports:
-      - '5435:5432'
+      - '127.0.0.1:5435:5432'
 
 volumes:
   postgres_data:
