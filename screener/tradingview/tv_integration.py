@@ -142,30 +142,36 @@ class TradingViewIntegration:
         """
         Allow the user to choose to delete the original list or not
         """
-        is_delete: str = input("Would you like to delete the original list? (y/n):")
-        _ = ""
-        if is_delete.lower() == "y":
-            for kind, tv_watchlist_id in self.config.items():
-                _ += self.clear_all_template.replace(
-                    "$WATCHLIST_ID$", str(tv_watchlist_id)
+        # add keyboard exception
+
+        try:
+            is_delete: str = input("Would you like to delete the original list? (y/n):")
+            _ = ""
+            if is_delete.lower() == "y":
+                for kind, tv_watchlist_id in self.config.items():
+                    _ += self.clear_all_template.replace(
+                        "$WATCHLIST_ID$", str(tv_watchlist_id)
+                    )
+                    _ += "\n\n"
+                pyperclip.copy(_)  # Copy to pasteboard
+                input(
+                    "Clear-all Copied to pasteboard, now paste to Chrome console in Tradingview.com and run, then press enter to continue"
                 )
+
+            for kind, tv_watchlist_id in self.config.items():
+                logging.warning(f"Exporting {kind} to watchlist {tv_watchlist_id}")
+                _ += await self.handle_category(kind, tv_watchlist_id)
                 _ += "\n\n"
-            pyperclip.copy(_)  # Copy to pasteboard
-            input(
-                "Clear-all Copied to pasteboard, now paste to Chrome console in Tradingview.com and run, then press enter to continue"
+                logging.warning(f"Exported {kind} to watchlist {tv_watchlist_id}")
+
+            # Also save to pasteboard
+            pyperclip.copy(_)
+            logging.warning(
+                "Copied to pasteboard, now paste to Chrome console in Tradingview.com and run"
             )
-
-        for kind, tv_watchlist_id in self.config.items():
-            logging.warning(f"Exporting {kind} to watchlist {tv_watchlist_id}")
-            _ += await self.handle_category(kind, tv_watchlist_id)
-            _ += "\n\n"
-            logging.warning(f"Exported {kind} to watchlist {tv_watchlist_id}")
-
-        # Also save to pasteboard
-        pyperclip.copy(_)
-        logging.warning(
-            "Copied to pasteboard, now paste to Chrome console in Tradingview.com and run"
-        )
+        except KeyboardInterrupt:
+            print("\nKeyboard Interrupt, exiting")
+            exit(0)
 
 
 if __name__ == "__main__":
