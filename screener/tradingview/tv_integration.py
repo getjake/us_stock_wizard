@@ -10,6 +10,7 @@ import logging
 import json
 from typing import List, Dict
 import pyperclip
+from datetime import datetime
 from us_stock_wizard import StockRootDirectory
 from us_stock_wizard.src.common import NetworkRequests
 
@@ -69,10 +70,23 @@ class TradingViewIntegration:
         if not self.host:
             self.host = StockRootDirectory().env().get("API_HOST")
 
-    async def _get_data_from_db(self, kind: str) -> List[str]:
+    @staticmethod
+    def is_valid_date(date_string):
+        try:
+            datetime.strptime(date_string, "%Y-%m-%d")
+            return True
+        except ValueError:
+            return False
+
+    async def _get_data_from_db(self, kind: str, date: str) -> List[str]:
         from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 
-        data = await StockDbUtils.read(table=DbTable.REPORT, output="df")
+        if not date:
+            data = await StockDbUtils.read(table=DbTable.REPORT, output="df")
+        else:
+            data = await StockDbUtils.read(
+                table=DbTable.REPORT, where={"date": date}, output="df"
+            )
         tickers = await StockDbUtils.read(table=DbTable.TICKERS, output="df")
         data = data[data["kind"] == kind]
 
@@ -82,7 +96,7 @@ class TradingViewIntegration:
         ticker_exported = tickers["market_ticker"].tolist()
         return ticker_exported
 
-    async def _get_data_from_api(self, kind: str) -> List[str]:
+    async def _get_data_from_api(self, kind: str, date: str) -> List[str]:
         """
         Get data from API
         """
@@ -91,17 +105,23 @@ class TradingViewIntegration:
 
         url = urllib.parse.urljoin(self.host, f"/api/reports/{kind}")
         logging.info(f"Getting data from {url}")
-        data = NetworkRequests._httpx_get_data(url=url, timeout=30)
+        if not date:
+            data = NetworkRequests._httpx_get_data(url=url, timeout=30)
+            return data
+        else:
+            data = NetworkRequests._httpx_get_data(
+                url=url, params={"date": date}, timeout=30
+            )
         return data
 
-    async def get_data(self, kind: str) -> List[str]:
+    async def get_data(self, kind: str, date: str) -> List[str]:
         """
         Get data from database
         """
         if self.source == DataSource.DB:
-            return await self._get_data_from_db(kind)
+            return await self._get_data_from_db(kind, date)
         elif self.source == DataSource.API:
-            return await self._get_data_from_api(kind)
+            return await self._get_data_from_api(kind, date)
         raise ValueError(f"Unknown source {self.source}")
 
     def handle_binance_tickers(self, kind: str) -> List[str]:
@@ -125,12 +145,12 @@ class TradingViewIntegration:
                 all_symbols.append(_)
         return all_symbols
 
-    async def handle_category(self, kind: str, id: int) -> str:
+    async def handle_category(self, kind: str, id: int, date: str) -> str:
         tickers = []
         if "binance" in kind.lower():
             tickers = self.handle_binance_tickers(kind)
         else:
-            tickers: List[str] = await self.get_data(kind)
+            tickers: List[str] = await self.get_data(kind, date)
         _id = str(id)
         _body = json.dumps(tickers)
         exported_script = self.insert_all_template.replace("$TICKERS$", _body).replace(
@@ -157,10 +177,25 @@ class TradingViewIntegration:
                 input(
                     "Clear-all Copied to pasteboard, now paste to Chrome console in Tradingview.com and run, then press enter to continue"
                 )
+            # Spec date
+            date = None
+            date_spec = input(
+                "Specify date (YYYY-MM-DD)?: If not specified, just enter to use the latest date available in database."
+            )
+            if not date_spec:
+                print("Using latest date available in database")
+            else:
+                if not self.is_valid_date(date_spec):
+                    logging.warning(
+                        "Invalid date format, should be YYYY-MM-DD, quitting."
+                    )
+                    exit(1)
+                date = date_spec
+                logging.warning(f"Will use date: {date}")
 
             for kind, tv_watchlist_id in self.config.items():
                 logging.warning(f"Exporting {kind} to watchlist {tv_watchlist_id}")
-                _ += await self.handle_category(kind, tv_watchlist_id)
+                _ += await self.handle_category(kind, tv_watchlist_id, date)
                 _ += "\n\n"
                 logging.warning(f"Exported {kind} to watchlist {tv_watchlist_id}")
 

@@ -9,6 +9,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from us_stock_wizard.database.db_utils import StockDbUtils, DbTable
 from us_stock_wizard.src.plot import StockPlot
+import pandas as pd
 
 app = FastAPI()
 
@@ -22,17 +23,30 @@ async def root() -> dict:
 
 
 @app.get("/api/reports/{kind}")
-async def get_latest_report(kind: str) -> Optional[List[str]]:
+async def get_report(kind: str, date: Optional[str] = None) -> Optional[List[str]]:
     """
     Get Report by kind
-
-    Example:
-    kind: PostAnalysis_stage2
+    Args:
+        kind: eg. PostAnalysis_stage2
+        date: YYYY-MM-DD
     """
     global tickers_mapping
     if not tickers_mapping:
         await get_tickers()
-    data = await StockDbUtils.read(table=DbTable.REPORT, output="df")
+
+    # Select Date
+    if date is None:
+        all_dates = await StockDbUtils.read_groupby(
+            table=DbTable.REPORT, group_by=["date"]
+        )
+        chosen_date = pd.DataFrame(all_dates)["date"].max()
+    else:
+        chosen_date = pd.to_datetime(date)
+
+    data = await StockDbUtils.read(
+        table=DbTable.REPORT, where={"date": chosen_date}, output="df"
+    )
+
     data = data[data["kind"] == kind]
     latest_data: List[str] = data.iloc[-1]["data"]
     _ = [tickers_mapping.get(ticker, ticker) for ticker in latest_data]

@@ -22,6 +22,7 @@ It include the following features:
 - [x] Fully integrated with TradingView(R), let you import over 1,000+ symbols into your watchlist with one click.
 - [x] Automatically notify you when app starts, and when the report is generated.
 - [x] Fully Customizable, you can add your own filters, and add your own indicators.
+- [x] Time Machine Mode, allow you to travel back to see history data.
 
 We use the following tools to build this project:
 
