@@ -23,7 +23,7 @@ async def root() -> dict:
 
 
 @app.get("/api/reports/{kind}")
-async def get_report(kind: str, date: Optional[str] = None) -> Optional[List[str]]:
+async def get_report(kind: str, date: str="latest") -> Optional[List[str]]:
     """
     Get Report by kind
     Args:
@@ -35,7 +35,7 @@ async def get_report(kind: str, date: Optional[str] = None) -> Optional[List[str
         await get_tickers()
 
     # Select Date
-    if date is None:
+    if date == "latest":
         all_dates = await StockDbUtils.read_groupby(
             table=DbTable.REPORT, group_by=["date"]
         )
@@ -46,8 +46,13 @@ async def get_report(kind: str, date: Optional[str] = None) -> Optional[List[str
     data = await StockDbUtils.read(
         table=DbTable.REPORT, where={"date": chosen_date}, output="df"
     )
+    if data.empty:
+        return []
 
     data = data[data["kind"] == kind]
+    if data.empty:
+        return []
+        
     latest_data: List[str] = data.iloc[-1]["data"]
     _ = [tickers_mapping.get(ticker, ticker) for ticker in latest_data]
     return _
