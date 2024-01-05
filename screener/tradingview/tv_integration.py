@@ -151,6 +151,14 @@ class TradingViewIntegration:
             tickers = self.handle_binance_tickers(kind)
         else:
             tickers: List[str] = await self.get_data(kind, date)
+
+        if not tickers:
+            # Not found any tickers
+            logging.error(
+                f"No tickers found in {kind} on {date}, maybe wrong date / not processed yet / not available"
+            )
+            return "\n\n"
+
         _id = str(id)
         _body = json.dumps(tickers)
         exported_script = self.insert_all_template.replace("$TICKERS$", _body).replace(
