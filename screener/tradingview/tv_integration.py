@@ -145,7 +145,7 @@ class TradingViewIntegration:
                 all_symbols.append(_)
         return all_symbols
 
-    async def handle_category(self, kind: str, id: int, date: str) -> str:
+    async def handle_category(self, kind: str, id: int, date: str) -> tuple[str, bool]:
         tickers = []
         if "binance" in kind.lower():
             tickers = self.handle_binance_tickers(kind)
@@ -157,14 +157,14 @@ class TradingViewIntegration:
             logging.error(
                 f"No tickers found in {kind} on {date}, maybe wrong date / not processed yet / not available"
             )
-            return "\n\n"
+            return "\n\n", False
 
         _id = str(id)
         _body = json.dumps(tickers)
         exported_script = self.insert_all_template.replace("$TICKERS$", _body).replace(
             "$WATCHLIST_ID$", _id
         )
-        return exported_script
+        return exported_script, True
 
     async def handle_all(self) -> str:
         """
@@ -192,6 +192,7 @@ class TradingViewIntegration:
             )
             if not date_spec:
                 print("Using latest date available in database")
+                date = None
             else:
                 if not self.is_valid_date(date_spec):
                     logging.warning(
@@ -201,17 +202,31 @@ class TradingViewIntegration:
                 date = date_spec
                 logging.warning(f"Will use date: {date}")
 
+            total_succ = 0
+            total = 0
             for kind, tv_watchlist_id in self.config.items():
+                total += 1
                 logging.warning(f"Exporting {kind} to watchlist {tv_watchlist_id}")
-                _ += await self.handle_category(kind, tv_watchlist_id, date)
+                content, succ = await self.handle_category(kind, tv_watchlist_id, date)
+                _ += content
+                if succ:
+                    total_succ += 1
+                    logging.warning(f"Exported {kind} to watchlist {tv_watchlist_id}")
+                else:
+                    logging.warning(
+                        f"Failed to export {kind} to watchlist {tv_watchlist_id}"
+                    )
                 _ += "\n\n"
-                logging.warning(f"Exported {kind} to watchlist {tv_watchlist_id}")
 
             # Also save to pasteboard
             pyperclip.copy(_)
-            logging.warning(
-                "Copied to pasteboard, now paste to Chrome console in Tradingview.com and run"
-            )
+            if total_succ > 0:
+                logging.warning(
+                    f"Exported {total_succ}/{total} to pasteboard. now paste to Chrome console in Tradingview.com and run"
+                )
+            else:
+                logging.warning(f"No data to export. No watchlist found. quitting.")
+
         except KeyboardInterrupt:
             print("\nKeyboard Interrupt, exiting")
             exit(0)
