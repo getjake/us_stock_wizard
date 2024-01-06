@@ -59,7 +59,7 @@ class KlineFetch:
             start: The start date of the data
         """
         tomorrow = (datetime.today() + pd.DateOffset(days=1)).strftime("%Y-%m-%d")
-        default = (datetime.today() - pd.DateOffset(days=252 * 3)).strftime("%Y-%m-%d")
+        default = (datetime.today() - pd.DateOffset(days=365 * 6)).strftime("%Y-%m-%d")
         if not start:
             start = default
         if not isinstance(start, str):
